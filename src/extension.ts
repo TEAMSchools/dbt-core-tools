@@ -25,6 +25,9 @@ import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
 import { CompiledSqlProvider, showCompiledSql } from "./features/compiledSql";
 import { registerParseOnSave } from "./features/parseOnSave";
+import { DbtDefinitionProvider } from "./features/definition";
+import { DbtHoverProvider } from "./features/hover";
+import { DbtCompletionProvider } from "./features/completion";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -156,6 +159,28 @@ export async function activate(
 
   // Register parse-on-save background runner.
   registerParseOnSave(context);
+
+  // Register definition, hover, and completion providers.
+  const dbtDocumentSelector: vscode.DocumentSelector = [
+    { language: "sql", scheme: "file" },
+    { language: "jinja-sql", scheme: "file" },
+  ];
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(
+      dbtDocumentSelector,
+      new DbtDefinitionProvider()
+    ),
+    vscode.languages.registerHoverProvider(
+      dbtDocumentSelector,
+      new DbtHoverProvider()
+    ),
+    vscode.languages.registerCompletionItemProvider(
+      dbtDocumentSelector,
+      new DbtCompletionProvider(),
+      "(",
+      "{"
+    )
+  );
 
   // Push status bar items so they're disposed on deactivation.
   context.subscriptions.push(_targetSelector, _deferToggle, _manifestStatus);
