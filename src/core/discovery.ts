@@ -12,7 +12,7 @@ import * as path from "path";
 import { DbtProject, extractProjectName } from "./project";
 
 export class ProjectDiscovery {
-  private projects: DbtProject[] = [];
+  projects: DbtProject[] = [];
 
   /**
    * Discovers all dbt projects in the workspace.

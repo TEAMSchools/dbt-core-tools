@@ -1,6 +1,15 @@
 import * as vscode from "vscode";
 import { ProjectDiscovery } from "./core/discovery";
 import { DbtProject } from "./core/project";
+import {
+  setupProject,
+  setupAllProjects,
+  installDeps,
+  parseProject,
+  cleanProject,
+  debugProject,
+  retryProject,
+} from "./commands/lifecycle";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -48,6 +57,17 @@ export async function activate(
 
   // Register YAML schema for dbt yml files via the Red Hat YAML extension.
   await registerYamlSchema();
+
+  // Register lifecycle commands.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("dbtCoreTools.setupProject", () => setupProject()),
+    vscode.commands.registerCommand("dbtCoreTools.setupAllProjects", () => setupAllProjects()),
+    vscode.commands.registerCommand("dbtCoreTools.installDeps", () => installDeps()),
+    vscode.commands.registerCommand("dbtCoreTools.parseProject", () => parseProject()),
+    vscode.commands.registerCommand("dbtCoreTools.cleanProject", () => cleanProject()),
+    vscode.commands.registerCommand("dbtCoreTools.debugProject", () => debugProject()),
+    vscode.commands.registerCommand("dbtCoreTools.retryProject", () => retryProject())
+  );
 
   // Dispose discovery on deactivation.
   context.subscriptions.push({ dispose: () => _discovery?.dispose() });
