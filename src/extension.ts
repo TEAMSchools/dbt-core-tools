@@ -19,6 +19,7 @@ import {
   testModelOptions,
   showModel,
 } from "./commands/modelCommands";
+import { stageExternalSources } from "./commands/stageExternal";
 import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
@@ -104,6 +105,13 @@ export async function activate(
     vscode.commands.registerCommand("dbtCoreTools.testModel", () => testModel()),
     vscode.commands.registerCommand("dbtCoreTools.testModelOptions", () => testModelOptions()),
     vscode.commands.registerCommand("dbtCoreTools.showModel", () => showModel())
+  );
+
+  // Register source staging command.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("dbtCoreTools.stageExternalSources", () =>
+      stageExternalSources()
+    )
   );
 
   // Register status bar commands.
