@@ -29,6 +29,8 @@ import { registerParseOnSave } from "./features/parseOnSave";
 import { DbtDefinitionProvider } from "./features/definition";
 import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
+import { toggleProperties } from "./features/properties";
+import { syncColumns } from "./features/columnSync";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -121,6 +123,12 @@ export async function activate(
     vscode.commands.registerCommand("dbtCoreTools.stageExternalSources", () =>
       stageExternalSources()
     )
+  );
+
+  // Register properties and column sync commands.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("dbtCoreTools.toggleProperties", () => toggleProperties()),
+    vscode.commands.registerCommand("dbtCoreTools.syncColumns", () => syncColumns())
   );
 
   // Register status bar commands.
