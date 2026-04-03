@@ -1,0 +1,296 @@
+{
+  "name": "dbt-core-tools",
+  "displayName": "dbt Core Tools",
+  "description": "A thin wrapper around dbt Core CLI for VS Code",
+  "version": "0.0.1",
+  "publisher": "TEAMSchools",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TEAMSchools/dbt-core-tools.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "workspaceContains:**/dbt_project.yml"
+  ],
+  "main": "./dist/extension.js",
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "dbtCoreTools.setupProject",
+        "title": "dbt Core Tools: Setup Project"
+      },
+      {
+        "command": "dbtCoreTools.setupAllProjects",
+        "title": "dbt Core Tools: Setup All Projects"
+      },
+      {
+        "command": "dbtCoreTools.installDeps",
+        "title": "dbt Core Tools: Install Dependencies"
+      },
+      {
+        "command": "dbtCoreTools.parseProject",
+        "title": "dbt Core Tools: Parse Project"
+      },
+      {
+        "command": "dbtCoreTools.cleanProject",
+        "title": "dbt Core Tools: Clean Project"
+      },
+      {
+        "command": "dbtCoreTools.debug",
+        "title": "dbt Core Tools: Debug"
+      },
+      {
+        "command": "dbtCoreTools.retry",
+        "title": "dbt Core Tools: Retry"
+      },
+      {
+        "command": "dbtCoreTools.runModel",
+        "title": "dbt Core Tools: Run Model",
+        "icon": "$(play)"
+      },
+      {
+        "command": "dbtCoreTools.runModelOptions",
+        "title": "dbt Core Tools: Run Model (Options)",
+        "icon": "$(play)"
+      },
+      {
+        "command": "dbtCoreTools.buildModel",
+        "title": "dbt Core Tools: Build Model",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "dbtCoreTools.buildModelOptions",
+        "title": "dbt Core Tools: Build Model (Options)",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "dbtCoreTools.testModel",
+        "title": "dbt Core Tools: Test Model",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "dbtCoreTools.testModelOptions",
+        "title": "dbt Core Tools: Test Model (Options)",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "dbtCoreTools.showModel",
+        "title": "dbt Core Tools: Show Model",
+        "icon": "$(table)"
+      },
+      {
+        "command": "dbtCoreTools.stageExternalSources",
+        "title": "dbt Core Tools: Stage External Sources",
+        "icon": "$(database)"
+      },
+      {
+        "command": "dbtCoreTools.showLineage",
+        "title": "dbt Core Tools: Show Lineage",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "dbtCoreTools.showCompiledSql",
+        "title": "dbt Core Tools: Show Compiled SQL",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "dbtCoreTools.toggleProperties",
+        "title": "dbt Core Tools: Toggle SQL/Properties",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "dbtCoreTools.syncColumns",
+        "title": "dbt Core Tools: Sync Columns"
+      },
+      {
+        "command": "dbtCoreTools.selectTarget",
+        "title": "dbt Core Tools: Select Target"
+      },
+      {
+        "command": "dbtCoreTools.toggleDefer",
+        "title": "dbt Core Tools: Toggle Defer"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "submenu": "dbtCoreTools.runSubmenu",
+          "group": "navigation@1",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "submenu": "dbtCoreTools.buildSubmenu",
+          "group": "navigation@2",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "submenu": "dbtCoreTools.testSubmenu",
+          "group": "navigation@3",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.showModel",
+          "group": "navigation@4",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.stageExternalSources",
+          "group": "navigation@5",
+          "when": "dbtCoreTools.isDbtSqlFileWithSources"
+        },
+        {
+          "command": "dbtCoreTools.showLineage",
+          "group": "navigation@6",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.showCompiledSql",
+          "group": "navigation@7",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.toggleProperties",
+          "group": "navigation@8",
+          "when": "dbtCoreTools.isDbtFile"
+        }
+      ],
+      "dbtCoreTools.runSubmenu": [
+        { "command": "dbtCoreTools.runModel" },
+        { "command": "dbtCoreTools.runModelOptions" }
+      ],
+      "dbtCoreTools.buildSubmenu": [
+        { "command": "dbtCoreTools.buildModel" },
+        { "command": "dbtCoreTools.buildModelOptions" }
+      ],
+      "dbtCoreTools.testSubmenu": [
+        { "command": "dbtCoreTools.testModel" },
+        { "command": "dbtCoreTools.testModelOptions" }
+      ],
+      "editor/context": [
+        {
+          "command": "dbtCoreTools.runModel",
+          "group": "dbtCoreTools@1",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.buildModel",
+          "group": "dbtCoreTools@2",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.testModel",
+          "group": "dbtCoreTools@3",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        },
+        {
+          "command": "dbtCoreTools.showModel",
+          "group": "dbtCoreTools@4",
+          "when": "dbtCoreTools.isDbtSqlFile"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "dbtCoreTools.runSubmenu",
+        "label": "Run",
+        "icon": "$(play)"
+      },
+      {
+        "id": "dbtCoreTools.buildSubmenu",
+        "label": "Build",
+        "icon": "$(tools)"
+      },
+      {
+        "id": "dbtCoreTools.testSubmenu",
+        "label": "Test",
+        "icon": "$(beaker)"
+      }
+    ],
+    "configuration": {
+      "title": "dbt Core Tools",
+      "properties": {
+        "dbtCoreTools.dbtCommand": {
+          "type": "string",
+          "default": "dbt",
+          "description": "Command prefix for invoking dbt (e.g., 'uv run dbt')"
+        },
+        "dbtCoreTools.projectDirectories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Explicit project paths; if empty, auto-discovered"
+        },
+        "dbtCoreTools.profilesDir": {
+          "type": "string",
+          "default": "",
+          "description": "Path to profiles directory"
+        },
+        "dbtCoreTools.target": {
+          "type": "object",
+          "default": {},
+          "description": "Per-project target (key: project name, value: target)"
+        },
+        "dbtCoreTools.parseOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run dbt parse on explicit save of .sql files"
+        },
+        "dbtCoreTools.deferManifestPath": {
+          "type": "object",
+          "default": {},
+          "description": "Per-project defer manifest path"
+        },
+        "dbtCoreTools.stageExternalSourcesVars": {
+          "type": "object",
+          "default": {},
+          "description": "Vars for stage_external_sources; supports ${projectName}"
+        },
+        "dbtCoreTools.showLimit": {
+          "type": "integer",
+          "default": 5,
+          "description": "Row limit for dbt show"
+        }
+      }
+    },
+    "yamlValidation": [
+      {
+        "fileMatch": "**/dbt_project.yml",
+        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/dbt_project.json"
+      },
+      {
+        "fileMatch": "**/selectors.yml",
+        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/selectors.json"
+      },
+      {
+        "fileMatch": "**/packages.yml",
+        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/packages.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.js --production",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "test": "mocha test/unit/**/*.test.ts --require ts-node/register",
+    "package": "npx @vscode/vsce package",
+    "publish": "npx @vscode/vsce publish"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.5.0",
+    "@types/vscode": "^1.110.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.28.0",
+    "mocha": "^11.7.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}
