@@ -18,10 +18,16 @@ npm run test           # Run unit tests (mocha + ts-node)
 npm run package        # Create .vsix package
 ```
 
+To package as VSIX for manual install:
+
+```bash
+npx @vscode/vsce package --allow-missing-repository
+```
+
 To run a single test file:
 
 ```bash
-npx mocha test/unit/someFile.test.ts --require ts-node/register
+npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 ```
 
 To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.json`).
@@ -30,7 +36,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 
 **Entry point:** `src/extension.ts` — `activate()` / `deactivate()` hooks.
 
-**Planned module layout:**
+**Module layout:**
 
 - `src/core/` — Project discovery, manifest reading/caching/watching, command execution, profiles parsing
 - `src/commands/` — Command handlers (lifecycle, model commands, options picker, stage external sources)
@@ -40,7 +46,9 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 
 **Build:** esbuild bundles `src/extension.ts` → single `dist/extension.js` (CJS, node platform, `vscode` external).
 
-**Extension activation:** Triggered by `workspaceContains:**/dbt_project.yml`. Projects discovered via `workspace.findFiles`, filtering out `dbt_packages/` and `dbt_modules/`. Manifests loaded lazily per project.
+**Extension activation:** Triggered by `workspaceContains:**/dbt_project.yml`. Projects discovered via `workspace.findFiles`, filtering out `dbt_packages/` and `dbt_modules/`. Manifests loaded lazily per project on first editor focus.
+
+**Shared state:** `src/extension.ts` owns module-level `_discovery` and `_activeProject`. Other modules access these via exported `getDiscovery()` and `getActiveProject()`. Commands and features import these getters — they never import `ProjectDiscovery` or `DbtProject` directly from core modules to access runtime state.
 
 ## Key Conventions
 
@@ -51,3 +59,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - Extension depends on `redhat.vscode-yaml` for YAML schema validation
 - Settings are namespaced under `dbtCoreTools.*`
 - Linting/formatting via Trunk (prettier, markdownlint, osv-scanner, trufflehog)
+- `vscode` is lazy-loaded via `require('vscode')` inside functions (not top-level imports) in core modules — this allows unit tests to run without the VS Code runtime
+- Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
+- `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
+- Webview assets (HTML/JS/CSS in `src/features/*/webview/`) are NOT bundled by esbuild — they're served at runtime via `webview.asWebviewUri()` and must be included in the VSIX
