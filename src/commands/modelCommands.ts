@@ -7,7 +7,11 @@
 import * as vscode from "vscode";
 import { buildDbtCommand, executeInTerminal } from "../core/executor";
 import { getActiveProject } from "../extension";
-import { buildSelector, showOptionsPicker, PickerOptions } from "./optionsPicker";
+import {
+  buildSelector,
+  showOptionsPicker,
+  PickerOptions,
+} from "./optionsPicker";
 import { showModelPreview } from "../features/preview/previewPanel";
 
 // ---------------------------------------------------------------------------
@@ -33,7 +37,7 @@ export function getModelName(): string | null {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active editor. Open a dbt SQL file first."
+      "dbt Core Tools: No active editor. Open a dbt SQL file first.",
     );
     return null;
   }
@@ -41,7 +45,7 @@ export function getModelName(): string | null {
   const filePath = editor.document.uri.fsPath;
   if (!filePath.endsWith(".sql")) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: Active file is not a SQL file."
+      "dbt Core Tools: Active file is not a SQL file.",
     );
     return null;
   }
@@ -64,7 +68,10 @@ export function getCommandOptions(projectName: string): {
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
   const profilesDir = config.get<string>("profilesDir", "") || undefined;
   const target = config.get<Record<string, string>>("target", {})[projectName];
-  const deferManifestPath = config.get<Record<string, string>>("deferManifestPath", {})[projectName];
+  const deferManifestPath = config.get<Record<string, string>>(
+    "deferManifestPath",
+    {},
+  )[projectName];
 
   return {
     dbtCommand,
@@ -87,12 +94,12 @@ export function getCommandOptions(projectName: string): {
  */
 export async function runModelCommand(
   subcommand: string,
-  withOptions: boolean
+  withOptions: boolean,
 ): Promise<void> {
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -113,7 +120,9 @@ export async function runModelCommand(
   }
 
   const selector = buildSelector(modelName, pickerOptions);
-  const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(project.name);
+  const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
+    project.name,
+  );
 
   const command = buildDbtCommand({
     dbtCommand,
@@ -137,25 +146,28 @@ export async function runModelCommand(
 export const runModel = (): Promise<void> => runModelCommand("run", false);
 
 /** Runs `dbt run` with the options picker. */
-export const runModelOptions = (): Promise<void> => runModelCommand("run", true);
+export const runModelOptions = (): Promise<void> =>
+  runModelCommand("run", true);
 
 /** Runs `dbt build` for the active model. */
 export const buildModel = (): Promise<void> => runModelCommand("build", false);
 
 /** Runs `dbt build` with the options picker. */
-export const buildModelOptions = (): Promise<void> => runModelCommand("build", true);
+export const buildModelOptions = (): Promise<void> =>
+  runModelCommand("build", true);
 
 /** Runs `dbt test` for the active model. */
 export const testModel = (): Promise<void> => runModelCommand("test", false);
 
 /** Runs `dbt test` with the options picker. */
-export const testModelOptions = (): Promise<void> => runModelCommand("test", true);
+export const testModelOptions = (): Promise<void> =>
+  runModelCommand("test", true);
 
 /** Shows the model preview panel for the active SQL file. */
 export async function showModel(): Promise<void> {
   if (!_context) {
     vscode.window.showErrorMessage(
-      "dbt Core Tools: Extension context not available. Please reload the window."
+      "dbt Core Tools: Extension context not available. Please reload the window.",
     );
     return;
   }

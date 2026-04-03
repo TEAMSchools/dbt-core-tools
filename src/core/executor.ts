@@ -117,10 +117,7 @@ const _runningTerminals = new Map<string, any>();
  * The vscode module is required lazily so this file can be loaded in unit tests
  * without the VS Code runtime present.
  */
-export function executeInTerminal(
-  command: string,
-  projectName: string
-): void {
+export function executeInTerminal(command: string, projectName: string): void {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
 
@@ -132,7 +129,7 @@ export function executeInTerminal(
     if (stillOpen) {
       vscode.window.showWarningMessage(
         `dbt Core Tools: A command is already running for project "${projectName}". ` +
-          `Please wait for it to complete or close its terminal.`
+          `Please wait for it to complete or close its terminal.`,
       );
       return;
     }
@@ -213,7 +210,7 @@ export function splitCommand(cmd: string): string[] {
  */
 export function executeAndCapture(
   command: string,
-  cwd: string
+  cwd: string,
 ): Promise<CaptureResult> {
   return new Promise((resolve) => {
     const [executable, ...args] = splitCommand(command);
@@ -224,11 +221,12 @@ export function executeAndCapture(
     }
 
     execFile(executable, args, { cwd }, (error, stdout, stderr) => {
-      const exitCode = error?.code !== undefined
-        ? typeof error.code === "number"
-          ? error.code
-          : 1
-        : 0;
+      const exitCode =
+        error?.code !== undefined
+          ? typeof error.code === "number"
+            ? error.code
+            : 1
+          : 0;
 
       resolve({
         stdout: stdout ?? "",

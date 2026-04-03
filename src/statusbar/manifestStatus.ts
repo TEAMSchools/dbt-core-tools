@@ -15,7 +15,7 @@ export class ManifestStatus {
   constructor() {
     this._item = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
-      98
+      98,
     );
     this._item.command = "dbtCoreTools.parseProject";
   }
@@ -39,7 +39,8 @@ export class ManifestStatus {
     const mtime = await project.getManifestMtime();
     if (!mtime) {
       this._item.text = "parsed: never";
-      this._item.tooltip = "Manifest has not been generated yet. Click to run dbt parse.";
+      this._item.tooltip =
+        "Manifest has not been generated yet. Click to run dbt parse.";
     } else {
       const timeStr = mtime.toLocaleTimeString(undefined, {
         hour: "2-digit",

@@ -19,6 +19,7 @@ npm run package        # Create .vsix package
 ```
 
 To run a single test file:
+
 ```bash
 npx mocha test/unit/someFile.test.ts --require ts-node/register
 ```
@@ -30,6 +31,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 **Entry point:** `src/extension.ts` — `activate()` / `deactivate()` hooks.
 
 **Planned module layout:**
+
 - `src/core/` — Project discovery, manifest reading/caching/watching, command execution, profiles parsing
 - `src/commands/` — Command handlers (lifecycle, model commands, options picker, stage external sources)
 - `src/statusbar/` — Target selector, defer toggle, manifest status indicator

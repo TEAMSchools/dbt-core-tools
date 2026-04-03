@@ -51,7 +51,7 @@ describe("buildDbtCommand", () => {
     const cmd = buildDbtCommand(opts);
     assert.ok(
       cmd.includes("--profiles-dir=/custom"),
-      `Expected --profiles-dir=/custom in: ${cmd}`
+      `Expected --profiles-dir=/custom in: ${cmd}`,
     );
   });
 
@@ -67,7 +67,7 @@ describe("buildDbtCommand", () => {
     assert.ok(cmd.includes("--defer"), `Expected --defer in: ${cmd}`);
     assert.ok(
       cmd.includes("--state=/ws/target/prod"),
-      `Expected --state=/ws/target/prod in: ${cmd}`
+      `Expected --state=/ws/target/prod in: ${cmd}`,
     );
   });
 
@@ -82,7 +82,7 @@ describe("buildDbtCommand", () => {
     const cmd = buildDbtCommand(opts);
     assert.ok(
       cmd.includes("--full-refresh"),
-      `Expected --full-refresh in: ${cmd}`
+      `Expected --full-refresh in: ${cmd}`,
     );
   });
 
@@ -97,7 +97,7 @@ describe("buildDbtCommand", () => {
     const cmd = buildDbtCommand(opts);
     assert.ok(
       !cmd.includes("--full-refresh"),
-      `Did not expect --full-refresh in: ${cmd}`
+      `Did not expect --full-refresh in: ${cmd}`,
     );
   });
 
@@ -122,7 +122,7 @@ describe("buildDbtCommand", () => {
     const cmd = buildDbtCommand(opts);
     assert.ok(
       cmd.includes('--vars={"key": "value"}'),
-      `Expected --vars in: ${cmd}`
+      `Expected --vars in: ${cmd}`,
     );
   });
 
@@ -149,7 +149,7 @@ describe("buildDbtCommand", () => {
     const cmd = buildDbtCommand(opts);
     assert.ok(
       cmd.includes("--no-partial-parse"),
-      `Expected extra args in: ${cmd}`
+      `Expected extra args in: ${cmd}`,
     );
   });
 });

@@ -27,7 +27,10 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  background-color: var(
+    --vscode-editorWidget-background,
+    var(--vscode-editor-background)
+  );
   border: 1px solid var(--vscode-panel-border);
   border-radius: 4px;
   padding: 4px 10px;
@@ -141,7 +144,10 @@ body {
 .context-menu {
   position: fixed;
   z-index: 100;
-  background-color: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  background-color: var(
+    --vscode-menu-background,
+    var(--vscode-editorWidget-background)
+  );
   border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
   border-radius: 4px;
   padding: 4px 0;
@@ -168,12 +174,16 @@ body {
 }
 
 .context-menu li:hover {
-  background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  background-color: var(
+    --vscode-menu-selectionBackground,
+    var(--vscode-list-hoverBackground)
+  );
   color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
 }
 
 .context-menu li.separator {
-  border-top: 1px solid var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
+  border-top: 1px solid
+    var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
   margin: 3px 0;
   padding: 0;
   cursor: default;

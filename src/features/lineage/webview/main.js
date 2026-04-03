@@ -24,9 +24,15 @@
   // ---------------------------------------------------------------------------
 
   const svgEl = /** @type {SVGSVGElement} */ (document.getElementById("graph"));
-  const contextMenu = /** @type {HTMLElement} */ (document.getElementById("context-menu"));
-  const lockToggle = /** @type {HTMLInputElement} */ (document.getElementById("lock-toggle"));
-  const centerLabel = /** @type {HTMLElement} */ (document.getElementById("center-label"));
+  const contextMenu = /** @type {HTMLElement} */ (
+    document.getElementById("context-menu")
+  );
+  const lockToggle = /** @type {HTMLInputElement} */ (
+    document.getElementById("lock-toggle")
+  );
+  const centerLabel = /** @type {HTMLElement} */ (
+    document.getElementById("center-label")
+  );
 
   // ---------------------------------------------------------------------------
   // Lock toggle
@@ -140,7 +146,11 @@
     g.setDefaultEdgeLabel(() => ({}));
 
     nodes.forEach((n) => {
-      g.setNode(n.id, { label: n.name, width: NODE_WIDTH, height: NODE_HEIGHT });
+      g.setNode(n.id, {
+        label: n.name,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+      });
     });
 
     edges.forEach((e) => {
@@ -194,7 +204,7 @@
     const ty = (svgH - totalH * scale) / 2;
     svg.call(
       /** @type {any} */ (zoom.transform),
-      d3.zoomIdentity.translate(tx, ty).scale(scale)
+      d3.zoomIdentity.translate(tx, ty).scale(scale),
     );
 
     // Draw edges
@@ -230,8 +240,16 @@
 
       const g2 = nodeGroup
         .append("g")
-        .attr("class", "node" + (isCurrent ? " current" : "") + (isContracted ? " contracted" : ""))
-        .attr("transform", `translate(${layout.x - NODE_WIDTH / 2}, ${layout.y - NODE_HEIGHT / 2})`)
+        .attr(
+          "class",
+          "node" +
+            (isCurrent ? " current" : "") +
+            (isContracted ? " contracted" : ""),
+        )
+        .attr(
+          "transform",
+          `translate(${layout.x - NODE_WIDTH / 2}, ${layout.y - NODE_HEIGHT / 2})`,
+        )
         .style("cursor", "pointer");
 
       // Background rect
@@ -245,7 +263,10 @@
 
       // Name label (center)
       const maxNameLen = 18;
-      const displayName = n.name.length > maxNameLen ? n.name.slice(0, maxNameLen - 1) + "…" : n.name;
+      const displayName =
+        n.name.length > maxNameLen
+          ? n.name.slice(0, maxNameLen - 1) + "…"
+          : n.name;
       g2.append("text")
         .attr("class", "node-label")
         .attr("x", NODE_WIDTH / 2)
@@ -288,32 +309,42 @@
       const downstreamHandle = nodeGroup
         .append("g")
         .attr("class", "expand-handle")
-        .attr("transform", `translate(${layout.x + NODE_WIDTH / 2 + 2}, ${layout.y})`);
+        .attr(
+          "transform",
+          `translate(${layout.x + NODE_WIDTH / 2 + 2}, ${layout.y})`,
+        );
 
-      downstreamHandle
-        .append("polygon")
-        .attr("points", "0,-8 14,0 0,8");
+      downstreamHandle.append("polygon").attr("points", "0,-8 14,0 0,8");
 
       downstreamHandle.on("click", (event) => {
         event.stopPropagation();
         hideContextMenu();
-        vscode.postMessage({ type: "expand", nodeId: n.id, direction: "downstream" });
+        vscode.postMessage({
+          type: "expand",
+          nodeId: n.id,
+          direction: "downstream",
+        });
       });
 
       // Expand upstream handle (left edge, triangle pointing left)
       const upstreamHandle = nodeGroup
         .append("g")
         .attr("class", "expand-handle")
-        .attr("transform", `translate(${layout.x - NODE_WIDTH / 2 - 2}, ${layout.y})`);
+        .attr(
+          "transform",
+          `translate(${layout.x - NODE_WIDTH / 2 - 2}, ${layout.y})`,
+        );
 
-      upstreamHandle
-        .append("polygon")
-        .attr("points", "0,-8 -14,0 0,8");
+      upstreamHandle.append("polygon").attr("points", "0,-8 -14,0 0,8");
 
       upstreamHandle.on("click", (event) => {
         event.stopPropagation();
         hideContextMenu();
-        vscode.postMessage({ type: "expand", nodeId: n.id, direction: "upstream" });
+        vscode.postMessage({
+          type: "expand",
+          nodeId: n.id,
+          direction: "upstream",
+        });
       });
     });
 
@@ -339,7 +370,10 @@
 
       case "updateCenter":
         if (!_locked) {
-          _graphData = { nodes: message.nodes ?? [], edges: message.edges ?? [] };
+          _graphData = {
+            nodes: message.nodes ?? [],
+            edges: message.edges ?? [],
+          };
           _currentNodeId = message.currentNodeId ?? null;
           render();
         }

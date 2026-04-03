@@ -11,7 +11,7 @@ import { findRefAtPosition, findSourceAtPosition } from "../utils/patterns";
 export class DbtDefinitionProvider implements vscode.DefinitionProvider {
   provideDefinition(
     document: vscode.TextDocument,
-    position: vscode.Position
+    position: vscode.Position,
   ): vscode.Location | null {
     const project = getDiscovery().findProjectForFile(document.uri.fsPath);
     if (!project) {
@@ -29,7 +29,7 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
         const absPath = path.join(project.rootPath, node.original_file_path);
         return new vscode.Location(
           vscode.Uri.file(absPath),
-          new vscode.Position(0, 0)
+          new vscode.Position(0, 0),
         );
       }
     }
@@ -43,10 +43,13 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
           source.source_name === sourceRef.sourceName &&
           source.name === sourceRef.tableName
         ) {
-          const absPath = path.join(project.rootPath, source.original_file_path);
+          const absPath = path.join(
+            project.rootPath,
+            source.original_file_path,
+          );
           return new vscode.Location(
             vscode.Uri.file(absPath),
-            new vscode.Position(0, 0)
+            new vscode.Position(0, 0),
           );
         }
       }
@@ -62,7 +65,7 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
           const absPath = path.join(project.rootPath, macro.original_file_path);
           return new vscode.Location(
             vscode.Uri.file(absPath),
-            new vscode.Position(0, 0)
+            new vscode.Position(0, 0),
           );
         }
       }

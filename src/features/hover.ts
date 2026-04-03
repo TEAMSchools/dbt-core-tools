@@ -8,10 +8,14 @@ import { getDiscovery } from "../extension";
 import { findRefAtPosition, findSourceAtPosition } from "../utils/patterns";
 import { ManifestColumn } from "../core/project";
 
-function formatColumnsTable(columns: Record<string, ManifestColumn>): vscode.Hover {
+function formatColumnsTable(
+  columns: Record<string, ManifestColumn>,
+): vscode.Hover {
   const lines = ["| Column | Type | Description |", "| --- | --- | --- |"];
   for (const col of Object.values(columns)) {
-    lines.push(`| ${col.name} | ${col.data_type ?? ""} | ${col.description ?? ""} |`);
+    lines.push(
+      `| ${col.name} | ${col.data_type ?? ""} | ${col.description ?? ""} |`,
+    );
   }
   return new vscode.Hover(new vscode.MarkdownString(lines.join("\n")));
 }
@@ -19,7 +23,7 @@ function formatColumnsTable(columns: Record<string, ManifestColumn>): vscode.Hov
 export class DbtHoverProvider implements vscode.HoverProvider {
   provideHover(
     document: vscode.TextDocument,
-    position: vscode.Position
+    position: vscode.Position,
   ): vscode.Hover | null {
     const project = getDiscovery().findProjectForFile(document.uri.fsPath);
     if (!project) {

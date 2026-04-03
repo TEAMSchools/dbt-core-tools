@@ -31,7 +31,8 @@ export class CompiledSqlProvider implements vscode.TextDocumentContentProvider {
       // Fall back to searching all discovered projects.
       try {
         const discovery = getDiscovery();
-        project = discovery.projects.find((p) => p.name === projectName) ?? null;
+        project =
+          discovery.projects.find((p) => p.name === projectName) ?? null;
       } catch {
         project = null;
       }
@@ -67,11 +68,13 @@ export class CompiledSqlProvider implements vscode.TextDocumentContentProvider {
  * Opens (or refreshes) a side-by-side read-only view of the compiled SQL
  * for the model currently open in the active editor.
  */
-export async function showCompiledSql(provider: CompiledSqlProvider): Promise<void> {
+export async function showCompiledSql(
+  provider: CompiledSqlProvider,
+): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active editor. Open a dbt SQL file first."
+      "dbt Core Tools: No active editor. Open a dbt SQL file first.",
     );
     return;
   }
@@ -80,7 +83,7 @@ export async function showCompiledSql(provider: CompiledSqlProvider): Promise<vo
   const ext = filePath.split(".").pop()?.toLowerCase();
   if (ext !== "sql") {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: Compiled SQL viewer only works with .sql files."
+      "dbt Core Tools: Compiled SQL viewer only works with .sql files.",
     );
     return;
   }
@@ -88,7 +91,7 @@ export async function showCompiledSql(provider: CompiledSqlProvider): Promise<vo
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -98,12 +101,14 @@ export async function showCompiledSql(provider: CompiledSqlProvider): Promise<vo
   const modelName = fileName.replace(/\.sql$/i, "");
 
   if (!modelName) {
-    vscode.window.showWarningMessage("dbt Core Tools: Could not determine model name from file.");
+    vscode.window.showWarningMessage(
+      "dbt Core Tools: Could not determine model name from file.",
+    );
     return;
   }
 
   const uri = vscode.Uri.parse(
-    `dbt-compiled:${modelName}.compiled.sql?project=${encodeURIComponent(project.name)}&model=${encodeURIComponent(modelName)}`
+    `dbt-compiled:${modelName}.compiled.sql?project=${encodeURIComponent(project.name)}&model=${encodeURIComponent(modelName)}`,
   );
 
   const doc = await vscode.workspace.openTextDocument(uri);

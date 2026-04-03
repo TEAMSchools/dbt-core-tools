@@ -24,7 +24,7 @@ export async function stageExternalSources(): Promise<void> {
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -34,7 +34,7 @@ export async function stageExternalSources(): Promise<void> {
   const profilesDir = config.get<string>("profilesDir", "") || undefined;
   const varsConfig = config.get<Record<string, string>>(
     "stageExternalSourcesVars",
-    {}
+    {},
   );
 
   // Interpolate ${projectName} in each var value.

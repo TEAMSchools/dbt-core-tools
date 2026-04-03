@@ -24,12 +24,13 @@ export async function syncColumns(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getActiveProject } = require("../extension") as typeof import("../extension");
+  const { getActiveProject } =
+    require("../extension") as typeof import("../extension");
 
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active editor. Open a dbt SQL or YAML file first."
+      "dbt Core Tools: No active editor. Open a dbt SQL or YAML file first.",
     );
     return;
   }
@@ -37,7 +38,7 @@ export async function syncColumns(): Promise<void> {
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -46,7 +47,7 @@ export async function syncColumns(): Promise<void> {
   const modelName = _resolveModelName(editor);
   if (!modelName) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: Could not determine model name. Open a .sql file or position cursor near a `- name:` entry in a .yml file."
+      "dbt Core Tools: Could not determine model name. Open a .sql file or position cursor near a `- name:` entry in a .yml file.",
     );
     return;
   }
@@ -55,7 +56,7 @@ export async function syncColumns(): Promise<void> {
   const node = project.findNodeByName(modelName);
   if (!node) {
     vscode.window.showWarningMessage(
-      `dbt Core Tools: Model "${modelName}" not found in manifest. Run dbt parse first.`
+      `dbt Core Tools: Model "${modelName}" not found in manifest. Run dbt parse first.`,
     );
     return;
   }
@@ -67,7 +68,7 @@ export async function syncColumns(): Promise<void> {
       `dbt Core Tools: Model "${modelName}" has an enforced contract. ` +
         `Manifest columns: [${manifestColNames.join(", ")}]. Continue?`,
       { modal: true },
-      "Continue"
+      "Continue",
     );
     if (confirmation !== "Continue") {
       return;
@@ -77,7 +78,7 @@ export async function syncColumns(): Promise<void> {
   // Step 4: find the YAML file via patch_path.
   if (!node.patch_path) {
     vscode.window.showWarningMessage(
-      `dbt Core Tools: Model "${modelName}" has no properties file. Use Toggle Properties to create one first.`
+      `dbt Core Tools: Model "${modelName}" has no properties file. Use Toggle Properties to create one first.`,
     );
     return;
   }
@@ -91,7 +92,7 @@ export async function syncColumns(): Promise<void> {
     ymlContent = await fs.promises.readFile(ymlPath, "utf8");
   } catch {
     vscode.window.showWarningMessage(
-      `dbt Core Tools: Could not read properties file at ${ymlPath}.`
+      `dbt Core Tools: Could not read properties file at ${ymlPath}.`,
     );
     return;
   }
@@ -99,15 +100,19 @@ export async function syncColumns(): Promise<void> {
   const existingColumns = _parseYamlColumns(ymlContent, modelName);
 
   // Step 6: compute diff.
-  const manifestColNames = new Set(Object.keys(node.columns).map((k) => k.toLowerCase()));
+  const manifestColNames = new Set(
+    Object.keys(node.columns).map((k) => k.toLowerCase()),
+  );
   const existingColNames = new Set(existingColumns.map((c) => c.toLowerCase()));
 
   const newCols = [...manifestColNames].filter((c) => !existingColNames.has(c));
-  const removedCols = [...existingColNames].filter((c) => !manifestColNames.has(c));
+  const removedCols = [...existingColNames].filter(
+    (c) => !manifestColNames.has(c),
+  );
 
   if (newCols.length === 0 && removedCols.length === 0) {
     vscode.window.showInformationMessage(
-      `dbt Core Tools: "${modelName}" columns are already in sync.`
+      `dbt Core Tools: "${modelName}" columns are already in sync.`,
     );
     return;
   }
@@ -115,7 +120,11 @@ export async function syncColumns(): Promise<void> {
   // Step 7: description propagation for new columns.
   const descriptions = new Map<string, string>();
   for (const colName of newCols) {
-    const desc = _findUpstreamDescription(colName, node.depends_on.nodes, project);
+    const desc = _findUpstreamDescription(
+      colName,
+      node.depends_on.nodes,
+      project,
+    );
     if (desc) {
       descriptions.set(colName, desc);
     }
@@ -127,7 +136,7 @@ export async function syncColumns(): Promise<void> {
     modelName,
     newCols,
     removedCols,
-    descriptions
+    descriptions,
   );
 
   // Step 10: write and open.
@@ -136,7 +145,7 @@ export async function syncColumns(): Promise<void> {
   await vscode.window.showTextDocument(doc);
 
   vscode.window.showInformationMessage(
-    `dbt Core Tools: Synced "${modelName}" — ${newCols.length} added, ${removedCols.length} marked removed.`
+    `dbt Core Tools: Synced "${modelName}" — ${newCols.length} added, ${removedCols.length} marked removed.`,
   );
 }
 
@@ -175,7 +184,10 @@ function _resolveModelName(editor: import("vscode").TextEditor): string | null {
  * Finds the model entry, then finds the `columns:` section beneath it,
  * and collects `- name:` entries until the section ends.
  */
-export function _parseYamlColumns(ymlContent: string, modelName: string): string[] {
+export function _parseYamlColumns(
+  ymlContent: string,
+  modelName: string,
+): string[] {
   const lines = ymlContent.split("\n");
   const columns: string[] = [];
 
@@ -254,7 +266,7 @@ function _indentOf(line: string): number {
 function _findUpstreamDescription(
   colName: string,
   upstreamNodeIds: string[],
-  project: DbtProject
+  project: DbtProject,
 ): string | null {
   const allNodes = project.getNodes();
   for (const nodeId of upstreamNodeIds) {
@@ -281,7 +293,7 @@ export function _applyColumnDiff(
   modelName: string,
   newCols: string[],
   removedCols: string[],
-  descriptions: Map<string, string>
+  descriptions: Map<string, string>,
 ): string {
   const lines = ymlContent.split("\n");
 
@@ -375,10 +387,7 @@ export function _applyColumnDiff(
       }
       modelBlockEnd = i + 1;
     }
-    const columnsSectionLines = [
-      `${colSectionIndent}columns:`,
-      ...newColLines,
-    ];
+    const columnsSectionLines = [`${colSectionIndent}columns:`, ...newColLines];
     lines.splice(modelBlockEnd, 0, ...columnsSectionLines);
   }
 

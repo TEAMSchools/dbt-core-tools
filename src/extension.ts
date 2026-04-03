@@ -31,7 +31,10 @@ import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
 import { toggleProperties } from "./features/properties";
 import { syncColumns } from "./features/columnSync";
-import { showLineage, updateLineageCenter } from "./features/lineage/lineagePanel";
+import {
+  showLineage,
+  updateLineageCenter,
+} from "./features/lineage/lineagePanel";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -68,7 +71,7 @@ export function getDeferToggle(): DeferToggle | null {
 // ---------------------------------------------------------------------------
 
 export async function activate(
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   // Make the extension context available to model commands (e.g. showModel).
   setExtensionContext(context);
@@ -92,7 +95,7 @@ export async function activate(
       await updateContextKeys(editor);
       await updateStatusBar();
       await updateLineageCenter(context);
-    })
+    }),
   );
 
   // Register YAML schema for dbt yml files via the Red Hat YAML extension.
@@ -100,52 +103,80 @@ export async function activate(
 
   // Register lifecycle commands.
   context.subscriptions.push(
-    vscode.commands.registerCommand("dbtCoreTools.setupProject", () => setupProject()),
-    vscode.commands.registerCommand("dbtCoreTools.setupAllProjects", () => setupAllProjects()),
-    vscode.commands.registerCommand("dbtCoreTools.installDeps", () => installDeps()),
-    vscode.commands.registerCommand("dbtCoreTools.parseProject", () => parseProject()),
-    vscode.commands.registerCommand("dbtCoreTools.cleanProject", () => cleanProject()),
+    vscode.commands.registerCommand("dbtCoreTools.setupProject", () =>
+      setupProject(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.setupAllProjects", () =>
+      setupAllProjects(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.installDeps", () =>
+      installDeps(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.parseProject", () =>
+      parseProject(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.cleanProject", () =>
+      cleanProject(),
+    ),
     vscode.commands.registerCommand("dbtCoreTools.debug", () => debugProject()),
-    vscode.commands.registerCommand("dbtCoreTools.retry", () => retryProject())
+    vscode.commands.registerCommand("dbtCoreTools.retry", () => retryProject()),
   );
 
   // Register model commands.
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.runModel", () => runModel()),
-    vscode.commands.registerCommand("dbtCoreTools.runModelOptions", () => runModelOptions()),
-    vscode.commands.registerCommand("dbtCoreTools.buildModel", () => buildModel()),
-    vscode.commands.registerCommand("dbtCoreTools.buildModelOptions", () => buildModelOptions()),
-    vscode.commands.registerCommand("dbtCoreTools.testModel", () => testModel()),
-    vscode.commands.registerCommand("dbtCoreTools.testModelOptions", () => testModelOptions()),
-    vscode.commands.registerCommand("dbtCoreTools.showModel", () => showModel())
+    vscode.commands.registerCommand("dbtCoreTools.runModelOptions", () =>
+      runModelOptions(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.buildModel", () =>
+      buildModel(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.buildModelOptions", () =>
+      buildModelOptions(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.testModel", () =>
+      testModel(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.testModelOptions", () =>
+      testModelOptions(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.showModel", () =>
+      showModel(),
+    ),
   );
 
   // Register source staging command.
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.stageExternalSources", () =>
-      stageExternalSources()
-    )
+      stageExternalSources(),
+    ),
   );
 
   // Register lineage command.
   context.subscriptions.push(
-    vscode.commands.registerCommand("dbtCoreTools.showLineage", () => showLineage(context))
+    vscode.commands.registerCommand("dbtCoreTools.showLineage", () =>
+      showLineage(context),
+    ),
   );
 
   // Register properties and column sync commands.
   context.subscriptions.push(
-    vscode.commands.registerCommand("dbtCoreTools.toggleProperties", () => toggleProperties()),
-    vscode.commands.registerCommand("dbtCoreTools.syncColumns", () => syncColumns())
+    vscode.commands.registerCommand("dbtCoreTools.toggleProperties", () =>
+      toggleProperties(),
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.syncColumns", () =>
+      syncColumns(),
+    ),
   );
 
   // Register status bar commands.
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.selectTarget", () =>
-      _targetSelector!.selectTarget(_activeProject)
+      _targetSelector!.selectTarget(_activeProject),
     ),
     vscode.commands.registerCommand("dbtCoreTools.toggleDefer", () =>
-      _deferToggle!.toggle(_activeProject)
-    )
+      _deferToggle!.toggle(_activeProject),
+    ),
   );
 
   // Register compiled SQL provider and command.
@@ -153,11 +184,11 @@ export async function activate(
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(
       "dbt-compiled",
-      compiledSqlProvider
+      compiledSqlProvider,
     ),
     vscode.commands.registerCommand("dbtCoreTools.showCompiledSql", () =>
-      showCompiledSql(compiledSqlProvider)
-    )
+      showCompiledSql(compiledSqlProvider),
+    ),
   );
 
   // Wire manifest change events: refresh any open compiled SQL documents.
@@ -187,18 +218,18 @@ export async function activate(
   context.subscriptions.push(
     vscode.languages.registerDefinitionProvider(
       dbtDocumentSelector,
-      new DbtDefinitionProvider()
+      new DbtDefinitionProvider(),
     ),
     vscode.languages.registerHoverProvider(
       dbtDocumentSelector,
-      new DbtHoverProvider()
+      new DbtHoverProvider(),
     ),
     vscode.languages.registerCompletionItemProvider(
       dbtDocumentSelector,
       new DbtCompletionProvider(),
       "(",
-      "{"
-    )
+      "{",
+    ),
   );
 
   // Push status bar items so they're disposed on deactivation.
@@ -230,7 +261,7 @@ async function updateStatusBar(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function updateContextKeys(
-  editor: vscode.TextEditor | undefined
+  editor: vscode.TextEditor | undefined,
 ): Promise<void> {
   if (!editor) {
     _activeProject = null;
@@ -262,22 +293,22 @@ async function updateContextKeys(
 async function setContextKeys(
   isDbtSqlFile: boolean,
   isDbtFile: boolean,
-  isDbtSqlFileWithSources: boolean
+  isDbtSqlFileWithSources: boolean,
 ): Promise<void> {
   await vscode.commands.executeCommand(
     "setContext",
     "dbtCoreTools.isDbtSqlFile",
-    isDbtSqlFile
+    isDbtSqlFile,
   );
   await vscode.commands.executeCommand(
     "setContext",
     "dbtCoreTools.isDbtFile",
-    isDbtFile
+    isDbtFile,
   );
   await vscode.commands.executeCommand(
     "setContext",
     "dbtCoreTools.isDbtSqlFileWithSources",
-    isDbtSqlFileWithSources
+    isDbtSqlFileWithSources,
   );
 }
 
@@ -314,7 +345,10 @@ async function registerYamlSchema(): Promise<void> {
 
       // Only apply to .yml / .yaml files, excluding reserved dbt files.
       const ext = fileName.split(".").pop()?.toLowerCase();
-      if ((ext !== "yml" && ext !== "yaml") || EXCLUDED_YML_FILENAMES.has(fileName)) {
+      if (
+        (ext !== "yml" && ext !== "yaml") ||
+        EXCLUDED_YML_FILENAMES.has(fileName)
+      ) {
         return undefined;
       }
 
@@ -328,6 +362,6 @@ async function registerYamlSchema(): Promise<void> {
     (_schemaUri: string) => {
       // Return null to let the YAML extension fetch the schema itself.
       return null;
-    }
+    },
   );
 }

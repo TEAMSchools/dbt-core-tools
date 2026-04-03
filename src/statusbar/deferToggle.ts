@@ -18,7 +18,7 @@ export class DeferToggle {
   constructor() {
     this._item = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
-      99
+      99,
     );
     this._item.command = "dbtCoreTools.toggleDefer";
     this._item.tooltip =
@@ -55,7 +55,7 @@ export class DeferToggle {
   async toggle(project: DbtProject | null): Promise<void> {
     if (!project) {
       vscode.window.showWarningMessage(
-        "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+        "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
       );
       return;
     }
@@ -64,7 +64,7 @@ export class DeferToggle {
       // Guide the user to configure a defer manifest path.
       await vscode.commands.executeCommand(
         "workbench.action.openSettings",
-        "dbtCoreTools.deferManifestPath"
+        "dbtCoreTools.deferManifestPath",
       );
       return;
     }

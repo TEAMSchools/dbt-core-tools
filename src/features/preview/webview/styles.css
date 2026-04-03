@@ -62,7 +62,10 @@ table {
 }
 
 thead {
-  background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+  background-color: var(
+    --vscode-editorGroupHeader-tabsBackground,
+    var(--vscode-editor-background)
+  );
   position: sticky;
   top: 0;
   z-index: 1;
@@ -109,7 +112,10 @@ tbody tr:hover {
   max-height: 60vh;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.9em;
-  background-color: var(--vscode-textBlockQuote-background, var(--vscode-editor-background));
+  background-color: var(
+    --vscode-textBlockQuote-background,
+    var(--vscode-editor-background)
+  );
   border: 1px solid var(--vscode-panel-border);
   padding: 10px 12px;
   border-radius: 3px;

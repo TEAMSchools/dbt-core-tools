@@ -12,7 +12,12 @@ async function main() {
     sourcemap: !production,
     minify: production,
   });
-  if (watch) { await ctx.watch(); console.log("Watching..."); }
-  else { await ctx.rebuild(); await ctx.dispose(); }
+  if (watch) {
+    await ctx.watch();
+    console.log("Watching...");
+  } else {
+    await ctx.rebuild();
+    await ctx.dispose();
+  }
 }
 main().catch(() => process.exit(1));

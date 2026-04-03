@@ -21,7 +21,7 @@ export interface ProfileTargets {
  */
 export function parseProfileTargets(
   profilesPath: string,
-  profileName: string
+  profileName: string,
 ): ProfileTargets {
   let content: string;
   try {

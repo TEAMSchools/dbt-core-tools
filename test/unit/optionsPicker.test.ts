@@ -22,7 +22,10 @@ describe("buildSelector", () => {
   });
 
   it("prepends and appends + when both upstream and downstream are true", () => {
-    const result = buildSelector("my_model", { upstream: true, downstream: true });
+    const result = buildSelector("my_model", {
+      upstream: true,
+      downstream: true,
+    });
     assert.strictEqual(result, "+my_model+");
   });
 
@@ -32,7 +35,11 @@ describe("buildSelector", () => {
   });
 
   it("handles all options set together", () => {
-    const result = buildSelector("my_model", { upstream: true, downstream: true, fullRefresh: true });
+    const result = buildSelector("my_model", {
+      upstream: true,
+      downstream: true,
+      fullRefresh: true,
+    });
     assert.strictEqual(result, "+my_model+");
   });
 });

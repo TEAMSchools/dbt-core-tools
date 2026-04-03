@@ -30,7 +30,7 @@ const CONFIG_KEYS = [
 export class DbtCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
-    position: vscode.Position
+    position: vscode.Position,
   ): vscode.CompletionItem[] {
     const project = getDiscovery().findProjectForFile(document.uri.fsPath);
     if (!project) {
@@ -46,7 +46,7 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
       return Object.values(nodes).map((node) => {
         const item = new vscode.CompletionItem(
           node.name,
-          vscode.CompletionItemKind.Reference
+          vscode.CompletionItemKind.Reference,
         );
         item.detail = node.resource_type;
         return item;
@@ -55,14 +55,17 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
 
     // source( with first arg already filled — return table names for that source
     const sourceTableMatch = /source\s*\(\s*['"](\w+)['"]\s*,\s*['"]?$/.exec(
-      textBeforeCursor
+      textBeforeCursor,
     );
     if (sourceTableMatch) {
       const sourceName = sourceTableMatch[1];
       const sources = project.getSources();
       return Object.values(sources)
         .filter((s) => s.source_name === sourceName)
-        .map((s) => new vscode.CompletionItem(s.name, vscode.CompletionItemKind.Field));
+        .map(
+          (s) =>
+            new vscode.CompletionItem(s.name, vscode.CompletionItemKind.Field),
+        );
     }
 
     // source( — return unique source names
@@ -76,8 +79,8 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
           items.push(
             new vscode.CompletionItem(
               source.source_name,
-              vscode.CompletionItemKind.Module
-            )
+              vscode.CompletionItemKind.Module,
+            ),
           );
         }
       }
@@ -90,7 +93,7 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
       return Object.values(macros).map((macro) => {
         const item = new vscode.CompletionItem(
           macro.name,
-          vscode.CompletionItemKind.Function
+          vscode.CompletionItemKind.Function,
         );
         item.detail = macro.package_name;
         return item;
@@ -100,7 +103,8 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
     // config( — return static config keys
     if (/config\s*\(\s*$/.test(textBeforeCursor)) {
       return CONFIG_KEYS.map(
-        (key) => new vscode.CompletionItem(key, vscode.CompletionItemKind.Property)
+        (key) =>
+          new vscode.CompletionItem(key, vscode.CompletionItemKind.Property),
       );
     }
 

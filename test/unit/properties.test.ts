@@ -14,13 +14,26 @@ describe("scaffoldYaml", () => {
 
   it("includes the model name entry", () => {
     const result = scaffoldYaml("my_model", []);
-    assert.ok(result.includes("- name: my_model"), "expected '- name: my_model' in output");
+    assert.ok(
+      result.includes("- name: my_model"),
+      "expected '- name: my_model' in output",
+    );
   });
 
   it("includes all column names when columns are provided", () => {
-    const result = scaffoldYaml("orders", ["order_id", "customer_id", "amount"]);
-    assert.ok(result.includes("- name: order_id"), "expected '- name: order_id'");
-    assert.ok(result.includes("- name: customer_id"), "expected '- name: customer_id'");
+    const result = scaffoldYaml("orders", [
+      "order_id",
+      "customer_id",
+      "amount",
+    ]);
+    assert.ok(
+      result.includes("- name: order_id"),
+      "expected '- name: order_id'",
+    );
+    assert.ok(
+      result.includes("- name: customer_id"),
+      "expected '- name: customer_id'",
+    );
     assert.ok(result.includes("- name: amount"), "expected '- name: amount'");
   });
 
@@ -31,17 +44,26 @@ describe("scaffoldYaml", () => {
 
   it("does not include 'description:' keys", () => {
     const result = scaffoldYaml("orders", ["order_id", "customer_id"]);
-    assert.ok(!result.includes("description:"), "unexpected 'description:' in output");
+    assert.ok(
+      !result.includes("description:"),
+      "unexpected 'description:' in output",
+    );
   });
 
   it("does not include 'columns:' section when no columns provided", () => {
     const result = scaffoldYaml("my_model", []);
-    assert.ok(!result.includes("columns:"), "unexpected 'columns:' when no columns given");
+    assert.ok(
+      !result.includes("columns:"),
+      "unexpected 'columns:' when no columns given",
+    );
   });
 
   it("handles a model with a single column", () => {
     const result = scaffoldYaml("dim_users", ["user_id"]);
-    assert.ok(result.includes("- name: dim_users"), "expected model name entry");
+    assert.ok(
+      result.includes("- name: dim_users"),
+      "expected model name entry",
+    );
     assert.ok(result.includes("- name: user_id"), "expected column entry");
     assert.ok(!result.includes("description:"), "unexpected 'description:'");
   });

@@ -36,18 +36,17 @@ export class ProjectDiscovery {
 
     if (explicitDirs.length > 0) {
       // Resolve explicit directories relative to first workspace folder.
-      const wsRoot =
-        vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
       ymlPaths = explicitDirs.map((d) =>
         path.join(
           path.isAbsolute(d) ? d : path.join(wsRoot, d),
-          "dbt_project.yml"
-        )
+          "dbt_project.yml",
+        ),
       );
     } else {
       const uris = await vscode.workspace.findFiles(
         "**/dbt_project.yml",
-        "{**/dbt_packages/**,**/dbt_modules/**}"
+        "{**/dbt_packages/**,**/dbt_modules/**}",
       );
       ymlPaths = uris.map((u) => u.fsPath);
     }
@@ -57,7 +56,7 @@ export class ProjectDiscovery {
     const filtered = ymlPaths.filter(
       (p) =>
         !p.includes(`${sep}dbt_packages${sep}`) &&
-        !p.includes(`${sep}dbt_modules${sep}`)
+        !p.includes(`${sep}dbt_modules${sep}`),
     );
 
     const projects: DbtProject[] = [];
@@ -98,7 +97,7 @@ export class ProjectDiscovery {
  */
 export function findProjectForFile(
   projects: DbtProject[],
-  filePath: string
+  filePath: string,
 ): DbtProject | null {
   let best: DbtProject | null = null;
   for (const project of projects) {

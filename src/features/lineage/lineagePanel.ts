@@ -47,12 +47,12 @@ let _panel: vscode.WebviewPanel | undefined;
  * Shows (or reveals) the lineage panel for the currently active SQL file.
  */
 export async function showLineage(
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -62,7 +62,7 @@ export async function showLineage(
   const nodeId = getActiveNodeId(project);
   if (!nodeId) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: Could not find a dbt model for the current file."
+      "dbt Core Tools: Could not find a dbt model for the current file.",
     );
     return;
   }
@@ -78,9 +78,15 @@ export async function showLineage(
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [
-          vscode.Uri.joinPath(context.extensionUri, "src", "features", "lineage", "webview"),
+          vscode.Uri.joinPath(
+            context.extensionUri,
+            "src",
+            "features",
+            "lineage",
+            "webview",
+          ),
         ],
-      }
+      },
     );
 
     _panel.onDidDispose(() => {
@@ -108,7 +114,7 @@ export async function showLineage(
  * If the panel is open and not locked, updates it to center on the new model.
  */
 export async function updateLineageCenter(
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   if (!_panel) {
     return;
@@ -145,7 +151,7 @@ export async function updateLineageCenter(
 export function buildGraphData(
   project: DbtProject,
   centerId: string,
-  depth: number
+  depth: number,
 ): GraphData {
   const childMap = project.getChildMap();
   const parentMap = project.getParentMap();
@@ -204,7 +210,8 @@ export function buildGraphData(
         id: node.unique_id,
         name: node.name,
         resourceType: node.resource_type,
-        materialization: (node.config?.["materialized"] as string | undefined) ?? "",
+        materialization:
+          (node.config?.["materialized"] as string | undefined) ?? "",
         contractEnforced: node.contract?.enforced ?? false,
       });
       continue;
@@ -244,7 +251,7 @@ export function buildGraphData(
 
 async function handleWebviewMessage(
   message: { type: string; nodeId?: string; direction?: string },
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   if (!message || !message.type) return;
 
@@ -349,18 +356,22 @@ function resolveNodeFilePath(nodeId: string): string | null {
 
 function buildWebviewHtml(
   context: vscode.ExtensionContext,
-  webview: vscode.Webview
+  webview: vscode.Webview,
 ): string {
   const webviewDir = vscode.Uri.joinPath(
     context.extensionUri,
     "src",
     "features",
     "lineage",
-    "webview"
+    "webview",
   );
 
-  const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, "styles.css"));
-  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, "main.js"));
+  const styleUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(webviewDir, "styles.css"),
+  );
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(webviewDir, "main.js"),
+  );
   const cspSource = webview.cspSource;
 
   const htmlPath = path.join(
@@ -369,7 +380,7 @@ function buildWebviewHtml(
     "features",
     "lineage",
     "webview",
-    "index.html"
+    "index.html",
   );
 
   let html = fs.readFileSync(htmlPath, "utf8");

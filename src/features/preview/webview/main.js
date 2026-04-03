@@ -137,14 +137,14 @@
         renderResults(
           message.columns ?? [],
           message.rows ?? [],
-          message.modelName ?? ""
+          message.modelName ?? "",
         );
         break;
       case "error":
         renderError(
           message.error ?? "",
           message.modelName ?? "",
-          message.command ?? ""
+          message.command ?? "",
         );
         break;
     }

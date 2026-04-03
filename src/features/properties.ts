@@ -62,12 +62,13 @@ export async function toggleProperties(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getActiveProject } = require("../extension") as typeof import("../extension");
+  const { getActiveProject } =
+    require("../extension") as typeof import("../extension");
 
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active editor. Open a dbt SQL or YAML file first."
+      "dbt Core Tools: No active editor. Open a dbt SQL or YAML file first.",
     );
     return;
   }
@@ -75,7 +76,7 @@ export async function toggleProperties(): Promise<void> {
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -89,7 +90,7 @@ export async function toggleProperties(): Promise<void> {
     await _propertiesToSql(vscode, editor, project);
   } else {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: Toggle Properties only works with .sql or .yml files."
+      "dbt Core Tools: Toggle Properties only works with .sql or .yml files.",
     );
   }
 }
@@ -102,13 +103,15 @@ async function _sqlToProperties(
   vscode: VsCode,
   editor: import("vscode").TextEditor,
   project: DbtProject,
-  filePath: string
+  filePath: string,
 ): Promise<void> {
   const fileName = filePath.split(/[\\/]/).pop() ?? "";
   const modelName = fileName.replace(/\.sql$/i, "");
 
   if (!modelName) {
-    vscode.window.showWarningMessage("dbt Core Tools: Could not determine model name from file.");
+    vscode.window.showWarningMessage(
+      "dbt Core Tools: Could not determine model name from file.",
+    );
     return;
   }
 
@@ -127,7 +130,7 @@ async function _sqlToProperties(
       const pos = doc.positionAt(idx);
       editorYml.revealRange(
         new vscode.Range(pos, pos),
-        vscode.TextEditorRevealType.InCenter
+        vscode.TextEditorRevealType.InCenter,
       );
       editorYml.selection = new vscode.Selection(pos, pos);
     }
@@ -149,7 +152,7 @@ async function _sqlToProperties(
 async function _propertiesToSql(
   vscode: VsCode,
   editor: import("vscode").TextEditor,
-  project: DbtProject
+  project: DbtProject,
 ): Promise<void> {
   const doc = editor.document;
   const cursorLine = editor.selection.active.line;
@@ -168,7 +171,7 @@ async function _propertiesToSql(
 
   if (!modelName) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: Could not find a `- name:` entry above the cursor."
+      "dbt Core Tools: Could not find a `- name:` entry above the cursor.",
     );
     return;
   }
@@ -176,7 +179,7 @@ async function _propertiesToSql(
   const node = project.findNodeByName(modelName);
   if (!node) {
     vscode.window.showWarningMessage(
-      `dbt Core Tools: Model "${modelName}" not found in manifest. Run dbt parse first.`
+      `dbt Core Tools: Model "${modelName}" not found in manifest. Run dbt parse first.`,
     );
     return;
   }

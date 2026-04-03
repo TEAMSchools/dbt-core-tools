@@ -113,7 +113,9 @@ describe("extractSourceCalls", () => {
   it("extracts a single source call", () => {
     const sql = `SELECT id FROM {{ source("raw", "events") }}`;
     const result = extractSourceCalls(sql);
-    assert.deepStrictEqual(result, [{ sourceName: "raw", tableName: "events" }]);
+    assert.deepStrictEqual(result, [
+      { sourceName: "raw", tableName: "events" },
+    ]);
   });
 
   it("handles source calls with mixed quotes", () => {
@@ -132,7 +134,9 @@ describe("extractSourceCalls", () => {
       SELECT * FROM {{ source('raw', 'events') }}
     `;
     const result = extractSourceCalls(sql);
-    assert.deepStrictEqual(result, [{ sourceName: "raw", tableName: "events" }]);
+    assert.deepStrictEqual(result, [
+      { sourceName: "raw", tableName: "events" },
+    ]);
   });
 });
 

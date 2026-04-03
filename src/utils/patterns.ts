@@ -65,7 +65,7 @@ export function extractSourceCalls(sql: string): SourceRef[] {
  */
 export function findRefAtPosition(
   line: string,
-  character: number
+  character: number,
 ): string | null {
   const pattern = new RegExp(REF_SOURCE, "g");
 
@@ -87,7 +87,7 @@ export function findRefAtPosition(
  */
 export function findSourceAtPosition(
   line: string,
-  character: number
+  character: number,
 ): SourceRef | null {
   const pattern = new RegExp(SOURCE_SOURCE, "g");
 

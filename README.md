@@ -13,7 +13,7 @@ A VS Code extension that wraps dbt Core CLI. No language server — just direct 
 
 Install from the VS Code Marketplace by searching for **dbt Core Tools** (publisher: TEAMSchools), or install the `.vsix` directly:
 
-```
+```text
 Extensions: Install from VSIX...
 ```
 
@@ -29,16 +29,16 @@ Run, build, test, and show models from the editor title bar or the command palet
 
 Lifecycle commands available from the command palette:
 
-| Command | Description |
-|---|---|
-| Setup Project | `dbt deps` + `dbt parse` for the current project |
-| Setup All Projects | Same for every discovered project |
-| Install Dependencies | `dbt deps` |
-| Parse Project | `dbt parse` |
-| Clean Project | `dbt clean` |
-| Debug | `dbt debug` |
-| Retry | Re-run the last failed command |
-| Stage External Sources | Run `dbt-external-tables` stage macro |
+| Command                | Description                                      |
+| ---------------------- | ------------------------------------------------ |
+| Setup Project          | `dbt deps` + `dbt parse` for the current project |
+| Setup All Projects     | Same for every discovered project                |
+| Install Dependencies   | `dbt deps`                                       |
+| Parse Project          | `dbt parse`                                      |
+| Clean Project          | `dbt clean`                                      |
+| Debug                  | `dbt debug`                                      |
+| Retry                  | Re-run the last failed command                   |
+| Stage External Sources | Run `dbt-external-tables` stage macro            |
 
 ### Compiled SQL Viewer
 
@@ -79,16 +79,16 @@ Powered by the parsed manifest:
 
 All settings are under the `dbtCoreTools` namespace.
 
-| Setting | Type | Default | Description |
-|---|---|---|---|
-| `dbtCoreTools.dbtCommand` | string | `"dbt"` | Command used to invoke dbt. Use `"uv run dbt"` or similar if needed. |
-| `dbtCoreTools.projectDirectories` | array | `[]` | Explicit project paths. When empty, projects are auto-discovered from the workspace. |
-| `dbtCoreTools.profilesDir` | string | `""` | Path to the directory containing `profiles.yml`. |
-| `dbtCoreTools.target` | object | `{}` | Per-project target override. Keys are project names, values are target names. |
-| `dbtCoreTools.parseOnSave` | boolean | `true` | Run `dbt parse` automatically when a `.sql` file is saved. |
-| `dbtCoreTools.deferManifestPath` | object | `{}` | Per-project path to a manifest used for `--defer`. Keys are project names. |
-| `dbtCoreTools.stageExternalSourcesVars` | object | `{}` | Vars passed to `stage_external_sources`. Supports `${projectName}` interpolation. |
-| `dbtCoreTools.showLimit` | integer | `5` | Row limit passed to `dbt show`. |
+| Setting                                 | Type    | Default | Description                                                                          |
+| --------------------------------------- | ------- | ------- | ------------------------------------------------------------------------------------ |
+| `dbtCoreTools.dbtCommand`               | string  | `"dbt"` | Command used to invoke dbt. Use `"uv run dbt"` or similar if needed.                 |
+| `dbtCoreTools.projectDirectories`       | array   | `[]`    | Explicit project paths. When empty, projects are auto-discovered from the workspace. |
+| `dbtCoreTools.profilesDir`              | string  | `""`    | Path to the directory containing `profiles.yml`.                                     |
+| `dbtCoreTools.target`                   | object  | `{}`    | Per-project target override. Keys are project names, values are target names.        |
+| `dbtCoreTools.parseOnSave`              | boolean | `true`  | Run `dbt parse` automatically when a `.sql` file is saved.                           |
+| `dbtCoreTools.deferManifestPath`        | object  | `{}`    | Per-project path to a manifest used for `--defer`. Keys are project names.           |
+| `dbtCoreTools.stageExternalSourcesVars` | object  | `{}`    | Vars passed to `stage_external_sources`. Supports `${projectName}` interpolation.    |
+| `dbtCoreTools.showLimit`                | integer | `5`     | Row limit passed to `dbt show`.                                                      |
 
 ### Example workspace settings
 

@@ -28,13 +28,13 @@ let _panelModelName: string | undefined;
  * Shows (or reveals) the model preview panel for the currently active SQL file.
  */
 export async function showModelPreview(
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   // --- resolve project / model ---
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
     );
     return;
   }
@@ -47,7 +47,9 @@ export async function showModelPreview(
   // --- settings ---
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
   const showLimit = config.get<number>("showLimit", 5);
-  const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(project.name);
+  const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
+    project.name,
+  );
 
   // --- build command ---
   const command = buildDbtCommand({
@@ -75,9 +77,15 @@ export async function showModelPreview(
       {
         enableScripts: true,
         localResourceRoots: [
-          vscode.Uri.joinPath(context.extensionUri, "src", "features", "preview", "webview"),
+          vscode.Uri.joinPath(
+            context.extensionUri,
+            "src",
+            "features",
+            "preview",
+            "webview",
+          ),
         ],
-      }
+      },
     );
     _panelModelName = modelName;
 
@@ -91,7 +99,9 @@ export async function showModelPreview(
     _panel.webview.onDidReceiveMessage(async (message) => {
       if (message?.type === "copy" && typeof message.text === "string") {
         await vscode.env.clipboard.writeText(message.text);
-        vscode.window.showInformationMessage("dbt Core Tools: Error copied to clipboard.");
+        vscode.window.showInformationMessage(
+          "dbt Core Tools: Error copied to clipboard.",
+        );
       }
     });
 
@@ -107,7 +117,10 @@ export async function showModelPreview(
       type: "error",
       modelName,
       command,
-      error: result.stderr || result.stdout || "dbt show failed with a non-zero exit code.",
+      error:
+        result.stderr ||
+        result.stdout ||
+        "dbt show failed with a non-zero exit code.",
     });
     return;
   }
@@ -124,18 +137,22 @@ export async function showModelPreview(
 
 function buildWebviewHtml(
   context: vscode.ExtensionContext,
-  webview: vscode.Webview
+  webview: vscode.Webview,
 ): string {
   const webviewDir = vscode.Uri.joinPath(
     context.extensionUri,
     "src",
     "features",
     "preview",
-    "webview"
+    "webview",
   );
 
-  const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, "styles.css"));
-  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, "main.js"));
+  const styleUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(webviewDir, "styles.css"),
+  );
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(webviewDir, "main.js"),
+  );
   const cspSource = webview.cspSource;
 
   // Generate a random nonce for CSP
@@ -147,7 +164,7 @@ function buildWebviewHtml(
     "features",
     "preview",
     "webview",
-    "index.html"
+    "index.html",
   );
 
   let html = fs.readFileSync(htmlPath, "utf8");
@@ -192,7 +209,7 @@ export function parseDbtShowOutput(stdout: string): {
   const parseLine = (line: string): string[] =>
     line
       .split("|")
-      .slice(1, -1)   // drop empty first/last segments from leading/trailing `|`
+      .slice(1, -1) // drop empty first/last segments from leading/trailing `|`
       .map((c) => c.trim());
 
   const columns = parseLine(tableLines[0]);

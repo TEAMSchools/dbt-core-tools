@@ -38,35 +38,32 @@ describe("DbtProject.containsFile", () => {
   it("returns true for a file nested several directories deep", () => {
     assert.strictEqual(
       project.containsFile(`${root}/models/staging/raw/stg_orders.sql`),
-      true
+      true,
     );
   });
 
   it("returns true for a file in the target directory", () => {
     assert.strictEqual(
       project.containsFile(`${root}/target/manifest.json`),
-      true
+      true,
     );
   });
 
   it("returns true for the dbt_project.yml file itself", () => {
-    assert.strictEqual(
-      project.containsFile(`${root}/dbt_project.yml`),
-      true
-    );
+    assert.strictEqual(project.containsFile(`${root}/dbt_project.yml`), true);
   });
 
   it("returns false for a sibling directory", () => {
     assert.strictEqual(
       project.containsFile("/workspace/other_project/models/orders.sql"),
-      false
+      false,
     );
   });
 
   it("returns false for a completely unrelated path", () => {
     assert.strictEqual(
       project.containsFile("/home/user/.dbt/profiles.yml"),
-      false
+      false,
     );
   });
 
@@ -74,7 +71,7 @@ describe("DbtProject.containsFile", () => {
     // e.g., root is /workspace/analytics but path is /workspace/analytics_extra/...
     assert.strictEqual(
       project.containsFile("/workspace/analytics_extra/models/foo.sql"),
-      false
+      false,
     );
   });
 
@@ -135,7 +132,10 @@ describe("findProjectForFile", () => {
 
   it("returns the matching project", () => {
     const p = makeProject("/workspace/analytics");
-    const result = findProjectForFile([p], "/workspace/analytics/models/foo.sql");
+    const result = findProjectForFile(
+      [p],
+      "/workspace/analytics/models/foo.sql",
+    );
     assert.strictEqual(result, p);
   });
 
@@ -147,7 +147,10 @@ describe("findProjectForFile", () => {
 
   it("returns the most specific (longest root) project for nested projects", () => {
     const parent = makeProject("/workspace/analytics", "analytics");
-    const child = makeProject("/workspace/analytics/sub_project", "sub_project");
+    const child = makeProject(
+      "/workspace/analytics/sub_project",
+      "sub_project",
+    );
     const filePath = "/workspace/analytics/sub_project/models/foo.sql";
 
     const result = findProjectForFile([parent, child], filePath);
@@ -156,7 +159,10 @@ describe("findProjectForFile", () => {
 
   it("returns the most specific project regardless of array order", () => {
     const parent = makeProject("/workspace/analytics", "analytics");
-    const child = makeProject("/workspace/analytics/sub_project", "sub_project");
+    const child = makeProject(
+      "/workspace/analytics/sub_project",
+      "sub_project",
+    );
     const filePath = "/workspace/analytics/sub_project/models/foo.sql";
 
     // Try with child first in the array
@@ -171,7 +177,7 @@ describe("findProjectForFile", () => {
 
     const result = findProjectForFile(
       [p1, p2, p3],
-      "/workspace/project_b/models/bar.sql"
+      "/workspace/project_b/models/bar.sql",
     );
     assert.strictEqual(result, p2);
   });

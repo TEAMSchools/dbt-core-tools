@@ -12,7 +12,9 @@
   "engines": {
     "vscode": "^1.110.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "workspaceContains:**/dbt_project.yml"
   ],
@@ -162,16 +164,28 @@
         }
       ],
       "dbtCoreTools.runSubmenu": [
-        { "command": "dbtCoreTools.runModel" },
-        { "command": "dbtCoreTools.runModelOptions" }
+        {
+          "command": "dbtCoreTools.runModel"
+        },
+        {
+          "command": "dbtCoreTools.runModelOptions"
+        }
       ],
       "dbtCoreTools.buildSubmenu": [
-        { "command": "dbtCoreTools.buildModel" },
-        { "command": "dbtCoreTools.buildModelOptions" }
+        {
+          "command": "dbtCoreTools.buildModel"
+        },
+        {
+          "command": "dbtCoreTools.buildModelOptions"
+        }
       ],
       "dbtCoreTools.testSubmenu": [
-        { "command": "dbtCoreTools.testModel" },
-        { "command": "dbtCoreTools.testModelOptions" }
+        {
+          "command": "dbtCoreTools.testModel"
+        },
+        {
+          "command": "dbtCoreTools.testModelOptions"
+        }
       ],
       "editor/context": [
         {
@@ -223,7 +237,9 @@
         },
         "dbtCoreTools.projectDirectories": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Explicit project paths; if empty, auto-discovered"
         },

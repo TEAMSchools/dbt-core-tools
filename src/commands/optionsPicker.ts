@@ -29,7 +29,10 @@ export interface PickerOptions {
  * Builds a dbt selector string from a model name and upstream/downstream flags.
  * e.g. buildSelector("my_model", { upstream: true }) => "+my_model"
  */
-export function buildSelector(modelName: string, options: PickerOptions): string {
+export function buildSelector(
+  modelName: string,
+  options: PickerOptions,
+): string {
   const prefix = options.upstream ? "+" : "";
   const suffix = options.downstream ? "+" : "";
   return `${prefix}${modelName}${suffix}`;
@@ -60,7 +63,8 @@ export async function showOptionsPicker(): Promise<PickerOptions | undefined> {
   const selected = await vscode.window.showQuickPick(items, {
     canPickMany: true,
     title: "dbt Model Options",
-    placeHolder: "Select options (press Enter with none selected to run with defaults)",
+    placeHolder:
+      "Select options (press Enter with none selected to run with defaults)",
   });
 
   // User cancelled (pressed Escape)

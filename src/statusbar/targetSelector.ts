@@ -15,7 +15,7 @@ export class TargetSelector {
   constructor() {
     this._item = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
-      100
+      100,
     );
     this._item.command = "dbtCoreTools.selectTarget";
     this._item.tooltip = "Click to change dbt target";
@@ -43,7 +43,7 @@ export class TargetSelector {
   async selectTarget(project: DbtProject | null): Promise<void> {
     if (!project) {
       vscode.window.showWarningMessage(
-        "dbt Core Tools: No active dbt project. Open a file inside a dbt project first."
+        "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
       );
       return;
     }
@@ -55,12 +55,12 @@ export class TargetSelector {
 
     const { targets, defaultTarget } = parseProfileTargets(
       profilesPath,
-      project.name
+      project.name,
     );
 
     if (targets.length === 0) {
       vscode.window.showWarningMessage(
-        `dbt Core Tools: No targets found for profile "${project.name}" in ${profilesPath}.`
+        `dbt Core Tools: No targets found for profile "${project.name}" in ${profilesPath}.`,
       );
       return;
     }
@@ -85,7 +85,7 @@ export class TargetSelector {
     await config.update(
       "target",
       { ...existing, [project.name]: picked.label },
-      vscode.ConfigurationTarget.Workspace
+      vscode.ConfigurationTarget.Workspace,
     );
 
     this.update(project);
