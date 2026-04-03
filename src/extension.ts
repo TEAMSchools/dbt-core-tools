@@ -23,6 +23,8 @@ import { stageExternalSources } from "./commands/stageExternal";
 import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
+import { CompiledSqlProvider, showCompiledSql } from "./features/compiledSql";
+import { registerParseOnSave } from "./features/parseOnSave";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -123,6 +125,37 @@ export async function activate(
       _deferToggle!.toggle(_activeProject)
     )
   );
+
+  // Register compiled SQL provider and command.
+  const compiledSqlProvider = new CompiledSqlProvider();
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      "dbt-compiled",
+      compiledSqlProvider
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.showCompiledSql", () =>
+      showCompiledSql(compiledSqlProvider)
+    )
+  );
+
+  // Wire manifest change events: refresh any open compiled SQL documents.
+  for (const project of _discovery.projects) {
+    const disposer = project.onManifestChanged(() => {
+      for (const doc of vscode.workspace.textDocuments) {
+        if (doc.uri.scheme !== "dbt-compiled") {
+          continue;
+        }
+        const params = new URLSearchParams(doc.uri.query);
+        if (params.get("project") === project.name) {
+          compiledSqlProvider.fireChange(doc.uri);
+        }
+      }
+    });
+    context.subscriptions.push({ dispose: disposer });
+  }
+
+  // Register parse-on-save background runner.
+  registerParseOnSave(context);
 
   // Push status bar items so they're disposed on deactivation.
   context.subscriptions.push(_targetSelector, _deferToggle, _manifestStatus);
