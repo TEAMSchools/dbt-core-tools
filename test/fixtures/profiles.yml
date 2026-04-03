@@ -1,0 +1,21 @@
+kipptaf:
+  target: defer
+  outputs:
+    defer:
+      type: bigquery
+      method: oauth
+      project: kipp-nj
+      dataset: dbt_defer
+      threads: 4
+    dev:
+      type: bigquery
+      method: oauth
+      project: kipp-nj
+      dataset: dbt_dev
+      threads: 4
+    prod:
+      type: bigquery
+      method: oauth
+      project: kipp-nj
+      dataset: dbt_prod
+      threads: 16
