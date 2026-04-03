@@ -18,6 +18,7 @@ import {
   testModel,
   testModelOptions,
   showModel,
+  setExtensionContext,
 } from "./commands/modelCommands";
 import { stageExternalSources } from "./commands/stageExternal";
 import { TargetSelector } from "./statusbar/targetSelector";
@@ -66,6 +67,9 @@ export function getDeferToggle(): DeferToggle | null {
 export async function activate(
   context: vscode.ExtensionContext
 ): Promise<void> {
+  // Make the extension context available to model commands (e.g. showModel).
+  setExtensionContext(context);
+
   _discovery = new ProjectDiscovery();
 
   // Instantiate status bar items.

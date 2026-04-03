@@ -8,6 +8,18 @@ import * as vscode from "vscode";
 import { buildDbtCommand, executeInTerminal } from "../core/executor";
 import { getActiveProject } from "../extension";
 import { buildSelector, showOptionsPicker, PickerOptions } from "./optionsPicker";
+import { showModelPreview } from "../features/preview/previewPanel";
+
+// ---------------------------------------------------------------------------
+// Extension context (set during activation for commands that need it)
+// ---------------------------------------------------------------------------
+
+let _context: vscode.ExtensionContext | undefined;
+
+/** Called from extension.ts activate() so commands can access the context. */
+export function setExtensionContext(ctx: vscode.ExtensionContext): void {
+  _context = ctx;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -139,10 +151,13 @@ export const testModel = (): Promise<void> => runModelCommand("test", false);
 /** Runs `dbt test` with the options picker. */
 export const testModelOptions = (): Promise<void> => runModelCommand("test", true);
 
-/**
- * Stub for showing a model preview.
- * Full implementation in Task 13.
- */
-export function showModel(): void {
-  vscode.window.showInformationMessage("dbt Core Tools: Model preview not yet available.");
+/** Shows the model preview panel for the active SQL file. */
+export async function showModel(): Promise<void> {
+  if (!_context) {
+    vscode.window.showErrorMessage(
+      "dbt Core Tools: Extension context not available. Please reload the window."
+    );
+    return;
+  }
+  await showModelPreview(_context);
 }

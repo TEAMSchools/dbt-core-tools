@@ -1,0 +1,141 @@
+/* dbt Core Tools — Model Preview Panel styles */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-editor-background);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  margin: 0;
+  padding: 12px 16px;
+}
+
+/* ---- Header ---- */
+
+#header {
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.preview-title {
+  margin: 0 0 4px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.error-title {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.row-count {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.error-command {
+  margin: 4px 0 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
+  word-break: break-all;
+}
+
+.error-command code {
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+/* ---- Table ---- */
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;
+}
+
+thead {
+  background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+th {
+  border: 1px solid var(--vscode-panel-border);
+  padding: 6px 10px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+th:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+td {
+  border: 1px solid var(--vscode-panel-border);
+  padding: 5px 10px;
+  white-space: nowrap;
+  color: var(--vscode-foreground);
+}
+
+tbody tr:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+/* ---- Error block ---- */
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.error-block {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-y: auto;
+  max-height: 60vh;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.9em;
+  background-color: var(--vscode-textBlockQuote-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-panel-border);
+  padding: 10px 12px;
+  border-radius: 3px;
+  margin: 0;
+  color: var(--vscode-foreground);
+}
+
+/* ---- Copy button ---- */
+
+.copy-btn {
+  align-self: flex-start;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.copy-btn:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.copy-btn:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
