@@ -19,6 +19,9 @@ import {
   testModelOptions,
   showModel,
 } from "./commands/modelCommands";
+import { TargetSelector } from "./statusbar/targetSelector";
+import { DeferToggle } from "./statusbar/deferToggle";
+import { ManifestStatus } from "./statusbar/manifestStatus";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -26,6 +29,10 @@ import {
 
 let _discovery: ProjectDiscovery | null = null;
 let _activeProject: DbtProject | null = null;
+
+let _targetSelector: TargetSelector | null = null;
+let _deferToggle: DeferToggle | null = null;
+let _manifestStatus: ManifestStatus | null = null;
 
 // ---------------------------------------------------------------------------
 // Public getters (for use by commands, features, etc.)
@@ -42,6 +49,10 @@ export function getActiveProject(): DbtProject | null {
   return _activeProject;
 }
 
+export function getDeferToggle(): DeferToggle | null {
+  return _deferToggle;
+}
+
 // ---------------------------------------------------------------------------
 // Activation
 // ---------------------------------------------------------------------------
@@ -50,6 +61,11 @@ export async function activate(
   context: vscode.ExtensionContext
 ): Promise<void> {
   _discovery = new ProjectDiscovery();
+
+  // Instantiate status bar items.
+  _targetSelector = new TargetSelector();
+  _deferToggle = new DeferToggle();
+  _manifestStatus = new ManifestStatus();
 
   // Discover projects in the workspace.
   await _discovery.discover();
@@ -61,6 +77,7 @@ export async function activate(
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       await updateContextKeys(editor);
+      await updateStatusBar();
     })
   );
 
@@ -89,12 +106,38 @@ export async function activate(
     vscode.commands.registerCommand("dbtCoreTools.showModel", () => showModel())
   );
 
+  // Register status bar commands.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("dbtCoreTools.selectTarget", () =>
+      _targetSelector!.selectTarget(_activeProject)
+    ),
+    vscode.commands.registerCommand("dbtCoreTools.toggleDefer", () =>
+      _deferToggle!.toggle(_activeProject)
+    )
+  );
+
+  // Push status bar items so they're disposed on deactivation.
+  context.subscriptions.push(_targetSelector, _deferToggle, _manifestStatus);
+
   // Dispose discovery on deactivation.
   context.subscriptions.push({ dispose: () => _discovery?.dispose() });
+
+  // Initial status bar update.
+  await updateStatusBar();
 }
 
 export function deactivate(): void {
   // Cleanup handled via context.subscriptions above.
+}
+
+// ---------------------------------------------------------------------------
+// Status bar helpers
+// ---------------------------------------------------------------------------
+
+async function updateStatusBar(): Promise<void> {
+  _targetSelector?.update(_activeProject);
+  _deferToggle?.update(_activeProject);
+  await _manifestStatus?.update(_activeProject);
 }
 
 // ---------------------------------------------------------------------------
