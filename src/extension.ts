@@ -10,6 +10,15 @@ import {
   debugProject,
   retryProject,
 } from "./commands/lifecycle";
+import {
+  runModel,
+  runModelOptions,
+  buildModel,
+  buildModelOptions,
+  testModel,
+  testModelOptions,
+  showModel,
+} from "./commands/modelCommands";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -67,6 +76,17 @@ export async function activate(
     vscode.commands.registerCommand("dbtCoreTools.cleanProject", () => cleanProject()),
     vscode.commands.registerCommand("dbtCoreTools.debugProject", () => debugProject()),
     vscode.commands.registerCommand("dbtCoreTools.retryProject", () => retryProject())
+  );
+
+  // Register model commands.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("dbtCoreTools.runModel", () => runModel()),
+    vscode.commands.registerCommand("dbtCoreTools.runModelOptions", () => runModelOptions()),
+    vscode.commands.registerCommand("dbtCoreTools.buildModel", () => buildModel()),
+    vscode.commands.registerCommand("dbtCoreTools.buildModelOptions", () => buildModelOptions()),
+    vscode.commands.registerCommand("dbtCoreTools.testModel", () => testModel()),
+    vscode.commands.registerCommand("dbtCoreTools.testModelOptions", () => testModelOptions()),
+    vscode.commands.registerCommand("dbtCoreTools.showModel", () => showModel())
   );
 
   // Dispose discovery on deactivation.
