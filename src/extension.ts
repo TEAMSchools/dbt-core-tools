@@ -105,8 +105,8 @@ export async function activate(
     vscode.commands.registerCommand("dbtCoreTools.installDeps", () => installDeps()),
     vscode.commands.registerCommand("dbtCoreTools.parseProject", () => parseProject()),
     vscode.commands.registerCommand("dbtCoreTools.cleanProject", () => cleanProject()),
-    vscode.commands.registerCommand("dbtCoreTools.debugProject", () => debugProject()),
-    vscode.commands.registerCommand("dbtCoreTools.retryProject", () => retryProject())
+    vscode.commands.registerCommand("dbtCoreTools.debug", () => debugProject()),
+    vscode.commands.registerCommand("dbtCoreTools.retry", () => retryProject())
   );
 
   // Register model commands.

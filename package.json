@@ -10,7 +10,7 @@
     "url": "https://github.com/TEAMSchools/dbt-core-tools.git"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.110.0"
   },
   "categories": ["Other"],
   "activationEvents": [
