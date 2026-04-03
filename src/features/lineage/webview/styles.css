@@ -1,0 +1,196 @@
+/* dbt Core Tools — Lineage Viewer styles */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+/* ---- Toolbar ---- */
+
+#toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.85em;
+}
+
+#lock-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#center-label {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- SVG canvas ---- */
+
+#graph {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---- Nodes ---- */
+
+.node rect {
+  rx: 4px;
+  ry: 4px;
+  stroke-width: 1.5;
+}
+
+.node.current rect {
+  stroke-width: 3;
+  stroke: var(--vscode-focusBorder);
+}
+
+.node.contracted rect {
+  stroke-dasharray: 5, 3;
+}
+
+.node-label {
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  fill: var(--vscode-editor-foreground, var(--vscode-foreground));
+  pointer-events: none;
+  dominant-baseline: middle;
+  text-anchor: middle;
+}
+
+.node-label-mat {
+  font-family: var(--vscode-font-family);
+  font-size: 10px;
+  fill: var(--vscode-descriptionForeground);
+  pointer-events: none;
+  dominant-baseline: middle;
+  text-anchor: middle;
+}
+
+.node-badge {
+  font-size: 11px;
+  pointer-events: none;
+  dominant-baseline: middle;
+  text-anchor: middle;
+}
+
+/* ---- Edges ---- */
+
+.edge path {
+  fill: none;
+  stroke: var(--vscode-panel-border);
+  stroke-width: 1.5;
+}
+
+.edge-arrow {
+  fill: var(--vscode-panel-border);
+}
+
+/* ---- Expand handles ---- */
+
+.expand-handle {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.expand-handle:hover {
+  opacity: 1;
+}
+
+.expand-handle polygon {
+  fill: var(--vscode-button-background);
+}
+
+.expand-handle text {
+  font-size: 9px;
+  fill: var(--vscode-button-foreground);
+  pointer-events: none;
+  dominant-baseline: middle;
+  text-anchor: middle;
+}
+
+/* ---- Context menu ---- */
+
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  background-color: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.context-menu.hidden {
+  display: none;
+}
+
+.context-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.context-menu li {
+  padding: 5px 14px;
+  cursor: pointer;
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.context-menu li:hover {
+  background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}
+
+.context-menu li.separator {
+  border-top: 1px solid var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
+  margin: 3px 0;
+  padding: 0;
+  cursor: default;
+}
+
+.context-menu li.separator:hover {
+  background-color: transparent;
+}
+
+/* ---- Empty state ---- */
+
+#empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  pointer-events: none;
+}

@@ -31,6 +31,7 @@ import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
 import { toggleProperties } from "./features/properties";
 import { syncColumns } from "./features/columnSync";
+import { showLineage, updateLineageCenter } from "./features/lineage/lineagePanel";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -90,6 +91,7 @@ export async function activate(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       await updateContextKeys(editor);
       await updateStatusBar();
+      await updateLineageCenter(context);
     })
   );
 
@@ -123,6 +125,11 @@ export async function activate(
     vscode.commands.registerCommand("dbtCoreTools.stageExternalSources", () =>
       stageExternalSources()
     )
+  );
+
+  // Register lineage command.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("dbtCoreTools.showLineage", () => showLineage(context))
   );
 
   // Register properties and column sync commands.
