@@ -22,6 +22,12 @@
   "extensionDependencies": [
     "redhat.vscode-yaml"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "This extension executes dbt commands and reads manifest data. It should only be used in trusted workspaces."
+    }
+  },
   "contributes": {
     "commands": [
       {

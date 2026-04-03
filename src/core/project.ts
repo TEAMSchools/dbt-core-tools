@@ -5,6 +5,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { safeJoinPath } from "../utils/paths";
 
 // ---------------------------------------------------------------------------
 // Manifest type definitions
@@ -197,7 +198,10 @@ export class DbtProject {
     for (const node of Object.values(nodes)) {
       const abs = path.isAbsolute(node.original_file_path)
         ? node.original_file_path
-        : path.join(this.rootPath, node.original_file_path);
+        : safeJoinPath(this.rootPath, node.original_file_path);
+      if (!abs) {
+        continue;
+      }
       if (abs === filePath || node.original_file_path === filePath) {
         return node;
       }

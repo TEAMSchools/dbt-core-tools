@@ -3,9 +3,9 @@
  * in dbt SQL files.
  */
 
-import * as path from "path";
 import * as vscode from "vscode";
 import { getDiscovery } from "../extension";
+import { safeJoinPath } from "../utils/paths";
 import { findRefAtPosition, findSourceAtPosition } from "../utils/patterns";
 
 export class DbtDefinitionProvider implements vscode.DefinitionProvider {
@@ -26,7 +26,10 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
     if (refName) {
       const node = project.findNodeByName(refName);
       if (node) {
-        const absPath = path.join(project.rootPath, node.original_file_path);
+        const absPath = safeJoinPath(project.rootPath, node.original_file_path);
+        if (!absPath) {
+          return null;
+        }
         return new vscode.Location(
           vscode.Uri.file(absPath),
           new vscode.Position(0, 0),
@@ -43,10 +46,13 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
           source.source_name === sourceRef.sourceName &&
           source.name === sourceRef.tableName
         ) {
-          const absPath = path.join(
+          const absPath = safeJoinPath(
             project.rootPath,
             source.original_file_path,
           );
+          if (!absPath) {
+            continue;
+          }
           return new vscode.Location(
             vscode.Uri.file(absPath),
             new vscode.Position(0, 0),
@@ -62,7 +68,13 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
       const macros = project.getMacros();
       for (const macro of Object.values(macros)) {
         if (macro.name === word) {
-          const absPath = path.join(project.rootPath, macro.original_file_path);
+          const absPath = safeJoinPath(
+            project.rootPath,
+            macro.original_file_path,
+          );
+          if (!absPath) {
+            continue;
+          }
           return new vscode.Location(
             vscode.Uri.file(absPath),
             new vscode.Position(0, 0),

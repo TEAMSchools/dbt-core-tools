@@ -10,6 +10,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
+import { safeJoinPath } from "../utils/paths";
 
 // Lazy type references — never imported at module load time.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -120,7 +121,13 @@ async function _sqlToProperties(
   if (node?.patch_path) {
     // patch_path format: "package://path/to/file.yml"
     const patchRelative = node.patch_path.replace(/^[^/]+:\/\//, "");
-    const patchAbsPath = path.join(project.rootPath, patchRelative);
+    const patchAbsPath = safeJoinPath(project.rootPath, patchRelative);
+    if (!patchAbsPath) {
+      vscode.window.showWarningMessage(
+        "dbt Core Tools: Properties file path escapes the project directory.",
+      );
+      return;
+    }
 
     const doc = await vscode.workspace.openTextDocument(patchAbsPath);
     const editorYml = await vscode.window.showTextDocument(doc);
@@ -186,7 +193,13 @@ async function _propertiesToSql(
 
   const sqlAbsPath = path.isAbsolute(node.original_file_path)
     ? node.original_file_path
-    : path.join(project.rootPath, node.original_file_path);
+    : safeJoinPath(project.rootPath, node.original_file_path);
+  if (!sqlAbsPath) {
+    vscode.window.showWarningMessage(
+      "dbt Core Tools: Model file path escapes the project directory.",
+    );
+    return;
+  }
 
   const sqlDoc = await vscode.workspace.openTextDocument(sqlAbsPath);
   await vscode.window.showTextDocument(sqlDoc);

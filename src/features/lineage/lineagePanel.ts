@@ -10,6 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { getActiveProject } from "../../extension";
 import { DbtProject } from "../../core/project";
+import { safeJoinPath } from "../../utils/paths";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -335,16 +336,16 @@ function resolveNodeFilePath(nodeId: string): string | null {
   if (node) {
     const abs = path.isAbsolute(node.original_file_path)
       ? node.original_file_path
-      : path.join(project.rootPath, node.original_file_path);
-    return fs.existsSync(abs) ? abs : null;
+      : safeJoinPath(project.rootPath, node.original_file_path);
+    return abs && fs.existsSync(abs) ? abs : null;
   }
 
   const source = sources[nodeId];
   if (source) {
     const abs = path.isAbsolute(source.original_file_path)
       ? source.original_file_path
-      : path.join(project.rootPath, source.original_file_path);
-    return fs.existsSync(abs) ? abs : null;
+      : safeJoinPath(project.rootPath, source.original_file_path);
+    return abs && fs.existsSync(abs) ? abs : null;
   }
 
   return null;

@@ -11,6 +11,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
+import { safeJoinPath } from "../utils/paths";
 
 // Lazy type references — never imported at module load time.
 type VsCode = typeof import("vscode");
@@ -84,7 +85,13 @@ export async function syncColumns(): Promise<void> {
   }
 
   const patchRelative = node.patch_path.replace(/^[^/]+:\/\//, "");
-  const ymlPath = path.join(project.rootPath, patchRelative);
+  const ymlPath = safeJoinPath(project.rootPath, patchRelative);
+  if (!ymlPath) {
+    vscode.window.showWarningMessage(
+      "dbt Core Tools: Properties file path escapes the project directory.",
+    );
+    return;
+  }
 
   // Step 5: parse existing columns from the YAML (line-based).
   let ymlContent: string;
