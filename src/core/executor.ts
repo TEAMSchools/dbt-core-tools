@@ -103,56 +103,101 @@ export function buildDbtCommand(options: DbtCommandOptions): string {
 }
 
 // ---------------------------------------------------------------------------
-// Terminal executor (one terminal per project — concurrency guard)
+// Terminal executor (one terminal per project — command queuing)
 // ---------------------------------------------------------------------------
 
-/** Map from projectName → active terminal. Keyed by project name. */
+/** Map from projectName → active terminal. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _runningTerminals = new Map<string, any>();
 
+/** Map from projectName → queued commands waiting to execute. */
+const _commandQueues = new Map<string, string[]>();
+
+/** Map from projectName → whether a command is currently running. */
+const _commandRunning = new Map<string, boolean>();
+
 /**
  * Executes a command in a dedicated VS Code terminal for the given project.
- * If a terminal for the project is already running (still open), shows a warning.
- *
- * The vscode module is required lazily so this file can be loaded in unit tests
- * without the VS Code runtime present.
+ * If a command is already running, queues it for execution after completion.
+ * Reuses the same terminal per project.
  */
 export function executeInTerminal(command: string, projectName: string): void {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
 
-  // Check if an existing terminal for this project is still open
+  // Check if a terminal exists and is still open
   const existing = _runningTerminals.get(projectName);
   if (existing) {
     const allTerminals: readonly unknown[] = vscode.window.terminals;
-    const stillOpen = allTerminals.includes(existing);
-    if (stillOpen) {
-      vscode.window.showWarningMessage(
-        `dbt Core Tools: A command is already running for project "${projectName}". ` +
-          `Please wait for it to complete or close its terminal.`,
-      );
-      return;
+    if (!allTerminals.includes(existing)) {
+      _runningTerminals.delete(projectName);
+      _commandRunning.delete(projectName);
+      _commandQueues.delete(projectName);
     }
-    // Terminal was closed externally — clean up
-    _runningTerminals.delete(projectName);
   }
 
-  const terminal = vscode.window.createTerminal({
+  const terminal = _runningTerminals.get(projectName);
+
+  if (terminal && _commandRunning.get(projectName)) {
+    // Queue the command for later execution
+    const queue = _commandQueues.get(projectName) ?? [];
+    queue.push(command);
+    _commandQueues.set(projectName, queue);
+    return;
+  }
+
+  if (terminal) {
+    // Terminal exists but no command running — send directly
+    _commandRunning.set(projectName, true);
+    terminal.show(true);
+    terminal.sendText(command);
+    return;
+  }
+
+  // Create a new terminal
+  const newTerminal = vscode.window.createTerminal({
     name: `dbt: ${projectName}`,
     cwd: undefined,
   });
-  _runningTerminals.set(projectName, terminal);
+  _runningTerminals.set(projectName, newTerminal);
+  _commandRunning.set(projectName, true);
 
-  // Clean up mapping when the terminal is closed
-  const disposable = vscode.window.onDidCloseTerminal((closed: unknown) => {
-    if (closed === terminal) {
-      _runningTerminals.delete(projectName);
-      disposable.dispose();
-    }
-  });
+  // Listen for command completion via shell integration
+  const execDisposable = vscode.window.onDidEndTerminalShellExecution?.(
+    (event: { terminal: unknown }) => {
+      if (event.terminal !== _runningTerminals.get(projectName)) {
+        return;
+      }
+      _commandRunning.set(projectName, false);
 
-  terminal.show(true /* preserveFocus */);
-  terminal.sendText(command);
+      const queue = _commandQueues.get(projectName);
+      if (queue && queue.length > 0) {
+        const next = queue.shift()!;
+        _commandRunning.set(projectName, true);
+        const t = _runningTerminals.get(projectName);
+        if (t) {
+          t.show(true);
+          t.sendText(next);
+        }
+      }
+    },
+  );
+
+  // Clean up when the terminal is closed
+  const closeDisposable = vscode.window.onDidCloseTerminal(
+    (closed: unknown) => {
+      if (closed === newTerminal) {
+        _runningTerminals.delete(projectName);
+        _commandRunning.delete(projectName);
+        _commandQueues.delete(projectName);
+        closeDisposable.dispose();
+        execDisposable?.dispose();
+      }
+    },
+  );
+
+  newTerminal.show(true);
+  newTerminal.sendText(command);
 }
 
 // ---------------------------------------------------------------------------
