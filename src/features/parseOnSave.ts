@@ -28,8 +28,13 @@ export function waitForParse(projectName: string): Promise<void> {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
-    child.on("close", resolve);
-    child.on("error", resolve);
+    const timeout = setTimeout(resolve, 30_000);
+    const done = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    child.on("close", done);
+    child.on("error", done);
   });
 }
 

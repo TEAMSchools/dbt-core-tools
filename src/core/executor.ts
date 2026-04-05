@@ -178,7 +178,10 @@ function drainQueue(projectName: string): void {
     panel: vscode.TaskPanelKind.Shared,
   };
 
-  vscode.tasks.executeTask(task).then(undefined, () => {
+  vscode.tasks.executeTask(task).then(undefined, (err: unknown) => {
+    vscode.window.showWarningMessage(
+      `dbt Core Tools: Failed to execute task for "${projectName}": ${err}`,
+    );
     _taskRunning.set(projectName, false);
     drainQueue(projectName);
   });
