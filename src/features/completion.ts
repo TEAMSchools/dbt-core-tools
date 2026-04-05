@@ -6,6 +6,24 @@
 import * as vscode from "vscode";
 import { getDiscovery } from "../extension";
 
+export const DBT_BUILT_IN_FUNCTIONS = [
+  { name: "ref", detail: "dbt built-in" },
+  { name: "source", detail: "dbt built-in" },
+  { name: "config", detail: "dbt built-in" },
+  { name: "var", detail: "dbt built-in" },
+  { name: "env_var", detail: "dbt built-in" },
+  { name: "log", detail: "dbt built-in" },
+  { name: "return", detail: "dbt built-in" },
+  { name: "is_incremental", detail: "dbt built-in" },
+  { name: "this", detail: "dbt built-in" },
+  { name: "set", detail: "Jinja built-in" },
+  { name: "if", detail: "Jinja built-in" },
+  { name: "for", detail: "Jinja built-in" },
+  { name: "macro", detail: "Jinja built-in" },
+  { name: "block", detail: "Jinja built-in" },
+  { name: "do", detail: "Jinja built-in" },
+];
+
 const CONFIG_KEYS = [
   "materialized",
   "schema",
@@ -87,15 +105,45 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
       return items;
     }
 
-    // {{ — return macro names
-    if (/\{\{\s*$/.test(textBeforeCursor)) {
+    // {{ or {{- — return macro names + dbt/Jinja built-in functions
+    if (/\{\{-?\s*$/.test(textBeforeCursor)) {
+      const items: vscode.CompletionItem[] = [];
+
+      // Built-in functions first
+      for (const fn of DBT_BUILT_IN_FUNCTIONS) {
+        const item = new vscode.CompletionItem(
+          fn.name,
+          vscode.CompletionItemKind.Function,
+        );
+        item.detail = fn.detail;
+        item.sortText = `0_${fn.name}`;
+        items.push(item);
+      }
+
+      // Manifest macros
       const macros = project.getMacros();
-      return Object.values(macros).map((macro) => {
+      for (const macro of Object.values(macros)) {
         const item = new vscode.CompletionItem(
           macro.name,
           vscode.CompletionItemKind.Function,
         );
         item.detail = macro.package_name;
+        item.sortText = `1_${macro.name}`;
+        items.push(item);
+      }
+
+      return items;
+    }
+
+    // {% or {%- — return Jinja tag keywords
+    if (/\{%-?\s*$/.test(textBeforeCursor)) {
+      const tagKeywords = ["if", "for", "set", "macro", "block", "filter", "call", "raw", "do"];
+      return tagKeywords.map((kw) => {
+        const item = new vscode.CompletionItem(
+          kw,
+          vscode.CompletionItemKind.Keyword,
+        );
+        item.detail = "Jinja tag";
         return item;
       });
     }
