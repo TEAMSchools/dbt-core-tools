@@ -28,10 +28,7 @@ import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
 import { toggleProperties } from "./features/properties";
 import { syncColumns } from "./features/columnSync";
-import {
-  showLineage,
-  updateLineageCenter,
-} from "./features/lineage/lineagePanel";
+import { LineageViewProvider } from "./features/lineage/lineagePanel";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -91,7 +88,7 @@ export async function activate(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       await updateContextKeys(editor);
       await updateStatusBar();
-      await updateLineageCenter(context);
+      await lineageProvider.updateCenter();
     }),
   );
 
@@ -140,10 +137,20 @@ export async function activate(
     ),
   );
 
-  // Register lineage command.
+  // Register lineage view provider.
+  const lineageProvider = new LineageViewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      LineageViewProvider.viewType,
+      lineageProvider,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
+  // Register lineage command to focus the panel.
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.showLineage", () =>
-      showLineage(context),
+      vscode.commands.executeCommand("dbtCoreTools.lineageView.focus"),
     ),
   );
 
@@ -191,6 +198,7 @@ export async function activate(
           compiledSqlProvider.fireChange(doc.uri);
         }
       }
+      lineageProvider.updateCenter();
     });
     context.subscriptions.push({ dispose: disposer });
   }

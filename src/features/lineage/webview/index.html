@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}} https://cdn.jsdelivr.net; img-src {{cspSource}};"
+      content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}}; img-src {{cspSource}};"
     />
     <link rel="stylesheet" href="{{styleUri}}" />
     <title>dbt Lineage</title>
@@ -30,8 +30,8 @@
         <li data-action="showModel">Show Model</li>
       </ul>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@dagrejs/dagre@1/dist/dagre.min.js"></script>
+    <script src="{{d3Uri}}"></script>
+    <script src="{{dagreUri}}"></script>
     <script src="{{scriptUri}}"></script>
   </body>
 </html>
