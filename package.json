@@ -64,28 +64,13 @@
         "icon": "$(play)"
       },
       {
-        "command": "dbtCoreTools.runModelOptions",
-        "title": "dbt Core Tools: Run Model (Options)",
-        "icon": "$(play)"
-      },
-      {
         "command": "dbtCoreTools.buildModel",
         "title": "dbt Core Tools: Build Model",
         "icon": "$(tools)"
       },
       {
-        "command": "dbtCoreTools.buildModelOptions",
-        "title": "dbt Core Tools: Build Model (Options)",
-        "icon": "$(tools)"
-      },
-      {
         "command": "dbtCoreTools.testModel",
         "title": "dbt Core Tools: Test Model",
-        "icon": "$(beaker)"
-      },
-      {
-        "command": "dbtCoreTools.testModelOptions",
-        "title": "dbt Core Tools: Test Model (Options)",
         "icon": "$(beaker)"
       },
       {
@@ -129,17 +114,17 @@
     "menus": {
       "editor/title": [
         {
-          "submenu": "dbtCoreTools.runSubmenu",
+          "command": "dbtCoreTools.runModel",
           "group": "navigation@1",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "submenu": "dbtCoreTools.buildSubmenu",
+          "command": "dbtCoreTools.buildModel",
           "group": "navigation@2",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "submenu": "dbtCoreTools.testSubmenu",
+          "command": "dbtCoreTools.testModel",
           "group": "navigation@3",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
@@ -169,30 +154,6 @@
           "when": "dbtCoreTools.isDbtFile"
         }
       ],
-      "dbtCoreTools.runSubmenu": [
-        {
-          "command": "dbtCoreTools.runModel"
-        },
-        {
-          "command": "dbtCoreTools.runModelOptions"
-        }
-      ],
-      "dbtCoreTools.buildSubmenu": [
-        {
-          "command": "dbtCoreTools.buildModel"
-        },
-        {
-          "command": "dbtCoreTools.buildModelOptions"
-        }
-      ],
-      "dbtCoreTools.testSubmenu": [
-        {
-          "command": "dbtCoreTools.testModel"
-        },
-        {
-          "command": "dbtCoreTools.testModelOptions"
-        }
-      ],
       "editor/context": [
         {
           "command": "dbtCoreTools.runModel",
@@ -216,23 +177,6 @@
         }
       ]
     },
-    "submenus": [
-      {
-        "id": "dbtCoreTools.runSubmenu",
-        "label": "Run",
-        "icon": "$(play)"
-      },
-      {
-        "id": "dbtCoreTools.buildSubmenu",
-        "label": "Build",
-        "icon": "$(tools)"
-      },
-      {
-        "id": "dbtCoreTools.testSubmenu",
-        "label": "Test",
-        "icon": "$(beaker)"
-      }
-    ],
     "configuration": {
       "title": "dbt Core Tools",
       "properties": {

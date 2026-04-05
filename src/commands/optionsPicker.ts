@@ -3,7 +3,7 @@
  *
  * Provides:
  * - buildSelector  — pure function that builds a dbt model selector string
- * - showOptionsPicker — vscode quick pick for Full Refresh, Upstream, Downstream
+ * - showOptionsPicker — vscode two-step quick pick for run/build/test
  */
 
 // vscode is NOT imported at the top level so this module can be loaded
@@ -43,31 +43,63 @@ export function buildSelector(
 // ---------------------------------------------------------------------------
 
 /**
- * Shows a canPickMany quick pick with Full Refresh, Upstream, and Downstream
- * options. Returns the selected options, or undefined if the user cancelled.
+ * Shows a two-step quick pick:
+ * Step 1: plain run vs run with options
+ * Step 2 (only if "with options" chosen): multi-select for scope and flags
+ *
+ * Returns the selected options, empty {} for plain run, or undefined if cancelled.
  */
-export async function showOptionsPicker(): Promise<PickerOptions | undefined> {
+export async function showOptionsPicker(
+  subcommand: string,
+): Promise<PickerOptions | undefined> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
 
-  const FULL_REFRESH = "Full Refresh";
+  const label = subcommand.charAt(0).toUpperCase() + subcommand.slice(1);
+
+  // Step 1: plain vs with-options
+  const choice = await vscode.window.showQuickPick(
+    [
+      { label, description: `${label} with no additional options` },
+      {
+        label: `${label} with options...`,
+        description: "Choose scope and flags",
+      },
+    ],
+    { title: `dbt ${label}`, placeHolder: `How would you like to ${subcommand}?` },
+  );
+
+  if (!choice) {
+    return undefined;
+  }
+
+  if (choice.label === label) {
+    return {};
+  }
+
+  // Step 2: multi-select options
   const UPSTREAM = "Upstream (+ prefix)";
   const DOWNSTREAM = "Downstream (+ suffix)";
+  const FULL_REFRESH = "Full Refresh";
 
   const items = [
-    { label: FULL_REFRESH, description: "Append --full-refresh" },
     { label: UPSTREAM, description: "Include upstream models (prepend +)" },
     { label: DOWNSTREAM, description: "Include downstream models (append +)" },
   ];
 
+  if (subcommand !== "test") {
+    items.push({
+      label: FULL_REFRESH,
+      description: "Append --full-refresh",
+    });
+  }
+
   const selected = await vscode.window.showQuickPick(items, {
     canPickMany: true,
-    title: "dbt Model Options",
-    placeHolder:
-      "Select options (press Enter with none selected to run with defaults)",
+    title: `dbt ${label} Options`,
+    placeHolder: "Select options (press Enter with none selected for defaults)",
   });
 
-  // User cancelled (pressed Escape)
   if (selected === undefined) {
     return undefined;
   }
