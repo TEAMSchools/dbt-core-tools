@@ -128,6 +128,17 @@ export async function showModelPreview(
   // --- parse markdown table from stdout ---
   const { columns, rows } = parseDbtShowOutput(result.stdout);
 
+  if (columns.length === 0) {
+    _panel.webview.postMessage({
+      type: "error",
+      modelName,
+      command,
+      error:
+        result.stdout || result.stderr || "dbt show returned no tabular output.",
+    });
+    return;
+  }
+
   _panel.webview.postMessage({ type: "results", columns, rows, modelName });
 }
 
