@@ -4,9 +4,10 @@
  * Provides run/build/test/show commands, each with and without the options picker.
  */
 
+import * as path from "path";
 import * as vscode from "vscode";
 import { buildDbtCommand, executeInTerminal } from "../core/executor";
-import { getActiveProject } from "../extension";
+import { getActiveProject, getDeferToggle } from "../extension";
 import {
   buildSelector,
   showOptionsPicker,
@@ -68,17 +69,26 @@ export function getCommandOptions(projectName: string): {
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
   const profilesDir = config.get<string>("profilesDir", "") || undefined;
   const target = config.get<Record<string, string>>("target", {})[projectName];
-  const deferManifestPath = config.get<Record<string, string>>(
-    "deferManifestPath",
-    {},
-  )[projectName];
 
-  return {
-    dbtCommand,
-    target,
-    profilesDir,
-    deferState: deferManifestPath || undefined,
-  };
+  // Only include deferState when the toggle is actually on.
+  let deferState: string | undefined;
+  const deferToggle = getDeferToggle();
+  if (deferToggle && deferToggle.isDeferred(projectName)) {
+    const deferManifestPath = config.get<Record<string, string>>(
+      "deferManifestPath",
+      {},
+    )[projectName];
+    if (deferManifestPath) {
+      // Resolve to absolute path so --state works regardless of terminal cwd.
+      const wsRoot =
+        vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+      deferState = path.isAbsolute(deferManifestPath)
+        ? deferManifestPath
+        : path.resolve(wsRoot, deferManifestPath);
+    }
+  }
+
+  return { dbtCommand, target, profilesDir, deferState };
 }
 
 // ---------------------------------------------------------------------------
