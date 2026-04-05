@@ -104,6 +104,15 @@ body {
   text-anchor: middle;
 }
 
+.test-badge {
+  pointer-events: none;
+}
+
+.test-badge text {
+  font-family: var(--vscode-font-family);
+  font-weight: 600;
+}
+
 /* ---- Edges ---- */
 
 .edge path {

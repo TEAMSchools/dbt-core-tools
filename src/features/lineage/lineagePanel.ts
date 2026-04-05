@@ -22,6 +22,7 @@ export interface GraphNode {
   resourceType: string;
   materialization: string;
   contractEnforced: boolean;
+  testCount: number;
 }
 
 export interface GraphEdge {
@@ -268,10 +269,15 @@ export function buildGraphData(
   const visitedNodes = new Set<string>();
   const edges: GraphEdge[] = [];
 
+  function isTest(id: string): boolean {
+    return id.startsWith("test.");
+  }
+
   function expandUpstream(id: string, remainingDepth: number): void {
     if (remainingDepth <= 0) return;
     const parents = parentMap[id] ?? [];
     for (const parentId of parents) {
+      if (isTest(parentId)) continue;
       if (!visitedNodes.has(parentId)) {
         visitedNodes.add(parentId);
         expandUpstream(parentId, remainingDepth - 1);
@@ -284,6 +290,7 @@ export function buildGraphData(
     if (remainingDepth <= 0) return;
     const children = childMap[id] ?? [];
     for (const childId of children) {
+      if (isTest(childId)) continue;
       if (!visitedNodes.has(childId)) {
         visitedNodes.add(childId);
         expandDownstream(childId, remainingDepth - 1);
@@ -299,15 +306,26 @@ export function buildGraphData(
   const edgeSet = new Set<string>();
   const uniqueEdges: GraphEdge[] = [];
   for (const edge of edges) {
-    const key = `${edge.source}→${edge.target}`;
+    const key = `${edge.source}\u2192${edge.target}`;
     if (!edgeSet.has(key)) {
       edgeSet.add(key);
       uniqueEdges.push(edge);
     }
   }
 
+  // Count test children for each visited node.
+  const testCounts = new Map<string, number>();
+  for (const id of visitedNodes) {
+    const children = childMap[id] ?? [];
+    const count = children.filter((c) => isTest(c)).length;
+    if (count > 0) {
+      testCounts.set(id, count);
+    }
+  }
+
   const graphNodes: GraphNode[] = [];
   for (const id of visitedNodes) {
+    const tc = testCounts.get(id) ?? 0;
     const node = nodes[id];
     if (node) {
       graphNodes.push({
@@ -317,6 +335,7 @@ export function buildGraphData(
         materialization:
           (node.config?.["materialized"] as string | undefined) ?? "",
         contractEnforced: node.contract?.enforced ?? false,
+        testCount: tc,
       });
       continue;
     }
@@ -328,6 +347,7 @@ export function buildGraphData(
         resourceType: source.resource_type,
         materialization: "",
         contractEnforced: false,
+        testCount: tc,
       });
       continue;
     }
@@ -339,6 +359,7 @@ export function buildGraphData(
       resourceType,
       materialization: "",
       contractEnforced: false,
+      testCount: tc,
     });
   }
 

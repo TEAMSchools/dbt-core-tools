@@ -16,7 +16,7 @@
   let _emptyMessage = "No lineage data available.";
 
   /**
-   * @typedef {{ id: string, name: string, resourceType: string, materialization: string, contractEnforced: boolean }} GraphNode
+   * @typedef {{ id: string, name: string, resourceType: string, materialization: string, contractEnforced: boolean, testCount: number }} GraphNode
    * @typedef {{ source: string, target: string }} GraphEdge
    */
 
@@ -290,6 +290,28 @@
           .attr("x", NODE_WIDTH - 8)
           .attr("y", 12)
           .text("🛡");
+      }
+
+      // Test count badge (bottom-left)
+      if (n.testCount > 0) {
+        const badgeG = g2
+          .append("g")
+          .attr("class", "test-badge")
+          .attr("transform", `translate(18, ${NODE_HEIGHT - 8})`);
+
+        badgeG
+          .append("circle")
+          .attr("r", 9)
+          .attr("fill", "var(--vscode-terminal-ansiBrightYellow, #dcdcaa)")
+          .attr("opacity", 0.25);
+
+        badgeG
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr("font-size", "9px")
+          .attr("fill", "var(--vscode-terminal-ansiBrightYellow, #dcdcaa)")
+          .text(n.testCount);
       }
 
       // Click → open file
