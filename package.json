@@ -44,7 +44,7 @@
         {
           "type": "webview",
           "id": "dbtCoreTools.lineageView",
-          "name": "Lineage"
+          "name": "dbt Lineage"
         }
       ]
     },
