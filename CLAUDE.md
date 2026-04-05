@@ -40,7 +40,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 
 **Module layout:**
 
-- `src/core/` — Project discovery, manifest reading/caching/watching, command execution, profiles parsing
+- `src/core/` — Project discovery, manifest reading/caching/watching, command execution (Task API), profiles parsing
 - `src/commands/` — Command handlers (lifecycle, model commands, options picker, stage external sources)
 - `src/statusbar/` — Target selector, defer toggle, manifest status indicator
 - `src/features/` — Compiled SQL provider, parse-on-save, properties toggle, column sync, definition/hover/completion providers, lineage webview, preview webview
@@ -63,14 +63,17 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - Settings are namespaced under `dbtCoreTools.*`
 - Linting/formatting via Trunk (prettier, markdownlint, osv-scanner, trufflehog)
 - `vscode` is lazy-loaded via `require('vscode')` inside functions (not top-level imports) in core modules — this allows unit tests to run without the VS Code runtime
-- If a module already has a top-level `import * as vscode`, don't use lazy require for other imports from the same module (e.g. `modelCommands.ts` statically imports from `../extension`)
+- If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` and `previewPanel.ts` statically import from `../extension`)
+- Command execution uses VS Code Task API (`ShellExecution` + `onDidEndTaskProcess`) for reliable completion detection — `initExecutor(context)` must be called in `activate()`
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
 - Webview assets (HTML/JS/CSS in `src/features/*/webview/`) are NOT bundled by esbuild — they're served at runtime via `webview.asWebviewUri()` and must be included in the VSIX
+- `.vscodeignore` excludes `src/**` but un-excludes `!src/features/*/webview/**` — any new webview directories need the same exception
 
 ## dbt-Specific Gotchas
 
 - `dbt parse` does NOT populate `compiled_code` in manifest — use `dbt compile` for that
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
+- `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; compile must wait for parse to finish
