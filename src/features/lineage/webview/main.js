@@ -1,53 +1,26 @@
 // @ts-nocheck — webview script runs in browser context, not TS-checked
-/* global d3, dagre */
+/* global d3, ELK */
 (function () {
   const vscode = acquireVsCodeApi();
 
-  // ---------------------------------------------------------------------------
   // State
-  // ---------------------------------------------------------------------------
-
-  /** @type {{ nodes: GraphNode[], edges: GraphEdge[] } | null} */
   let _graphData = null;
-  /** @type {string | null} */
   let _currentNodeId = null;
-  /** @type {boolean} */
   let _locked = false;
   let _emptyMessage = "No lineage data available.";
 
-  /**
-   * @typedef {{ id: string, name: string, resourceType: string, materialization: string, contractEnforced: boolean, testCount: number }} GraphNode
-   * @typedef {{ source: string, target: string }} GraphEdge
-   */
-
-  // ---------------------------------------------------------------------------
   // DOM refs
-  // ---------------------------------------------------------------------------
+  const svgEl = document.getElementById("graph");
+  const contextMenu = document.getElementById("context-menu");
+  const lockToggle = document.getElementById("lock-toggle");
+  const centerLabel = document.getElementById("center-label");
 
-  const svgEl = /** @type {SVGSVGElement} */ (document.getElementById("graph"));
-  const contextMenu = /** @type {HTMLElement} */ (
-    document.getElementById("context-menu")
-  );
-  const lockToggle = /** @type {HTMLInputElement} */ (
-    document.getElementById("lock-toggle")
-  );
-  const centerLabel = /** @type {HTMLElement} */ (
-    document.getElementById("center-label")
-  );
-
-  // ---------------------------------------------------------------------------
   // Lock toggle
-  // ---------------------------------------------------------------------------
-
   lockToggle.addEventListener("change", () => {
     _locked = lockToggle.checked;
   });
 
-  // ---------------------------------------------------------------------------
   // Context menu state
-  // ---------------------------------------------------------------------------
-
-  /** @type {string | null} */
   let _contextNodeId = null;
 
   document.addEventListener("click", () => hideContextMenu());
@@ -74,11 +47,7 @@
     _contextNodeId = null;
   }
 
-  // ---------------------------------------------------------------------------
   // Color mapping by resource type
-  // ---------------------------------------------------------------------------
-
-  /** @param {string} resourceType */
   function nodeColor(resourceType) {
     switch (resourceType) {
       case "model":
@@ -96,9 +65,7 @@
     }
   }
 
-  /** @param {string} resourceType */
   function nodeFill(resourceType) {
-    // Return slightly dimmer background for the rectangle fill
     switch (resourceType) {
       case "model":
         return "var(--vscode-terminal-ansiBlueDim, rgba(79,168,213,0.15))";
@@ -115,14 +82,13 @@
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  // ELK instance
+  const elk = new ELK();
 
   const NODE_WIDTH = 160;
   const NODE_HEIGHT = 60;
 
-  function render() {
+  async function render() {
     if (!_graphData || _graphData.nodes.length === 0) {
       d3.select(svgEl).selectAll("*").remove();
       const w = svgEl.clientWidth || 600;
@@ -141,31 +107,47 @@
 
     const { nodes, edges } = _graphData;
 
-    // Build dagre graph
-    const g = new dagre.graphlib.Graph();
-    g.setGraph({ rankdir: "LR", nodesep: 50, ranksep: 100 });
-    g.setDefaultEdgeLabel(() => ({}));
-
-    nodes.forEach((n) => {
-      g.setNode(n.id, {
-        label: n.name,
+    // Build ELK graph
+    const elkGraph = {
+      id: "root",
+      layoutOptions: {
+        "elk.algorithm": "layered",
+        "elk.direction": "RIGHT",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+        "elk.spacing.nodeNode": "25",
+        "elk.layered.compaction.postCompaction.strategy": "EDGE_LENGTH",
+        "elk.edgeRouting": "ORTHOGONAL",
+      },
+      children: nodes.map((n) => ({
+        id: n.id,
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
-      });
-    });
+      })),
+      edges: edges.map((e, i) => ({
+        id: "e" + i,
+        sources: [e.source],
+        targets: [e.target],
+      })),
+    };
 
-    edges.forEach((e) => {
-      g.setEdge(e.source, e.target);
-    });
-
-    dagre.layout(g);
+    let layout;
+    try {
+      layout = await elk.layout(elkGraph);
+    } catch (err) {
+      console.error("ELK layout failed:", err);
+      return;
+    }
 
     // Clear SVG
     d3.select(svgEl).selectAll("*").remove();
 
-    const graphLayout = g.graph();
-    const totalW = (graphLayout.width || 600) + 200;
-    const totalH = (graphLayout.height || 400) + 100;
+    const childMap = new Map();
+    for (const child of layout.children || []) {
+      childMap.set(child.id, child);
+    }
+
+    const totalW = (layout.width || 600) + 100;
+    const totalH = (layout.height || 400) + 100;
 
     const svg = d3.select(svgEl);
 
@@ -187,7 +169,6 @@
     // Root group with zoom/pan
     const root = svg.append("g").attr("class", "root");
 
-    // Zoom behavior
     const zoom = d3
       .zoom()
       .scaleExtent([0.1, 3])
@@ -195,7 +176,7 @@
         root.attr("transform", event.transform);
       });
 
-    svg.call(/** @type {any} */ (zoom));
+    svg.call(zoom);
 
     // Initial fit-to-view
     const svgW = svgEl.clientWidth || 800;
@@ -203,38 +184,39 @@
     const scale = Math.min(svgW / totalW, svgH / totalH, 1);
     const tx = (svgW - totalW * scale) / 2;
     const ty = (svgH - totalH * scale) / 2;
-    svg.call(
-      /** @type {any} */ (zoom.transform),
-      d3.zoomIdentity.translate(tx, ty).scale(scale),
-    );
+    svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
 
     // Draw edges
     const edgeGroup = root.append("g").attr("class", "edges");
-    edges.forEach((e) => {
-      const edgeLayout = g.edge(e.source, e.target);
-      if (!edgeLayout) return;
-      const line = d3
-        .line()
-        .x((d) => d[0])
-        .y((d) => d[1])
-        .curve(d3.curveBasis);
+    for (const elkEdge of layout.edges || []) {
+      for (const section of elkEdge.sections || []) {
+        const points = [];
+        points.push([section.startPoint.x, section.startPoint.y]);
+        for (const bp of section.bendPoints || []) {
+          points.push([bp.x, bp.y]);
+        }
+        points.push([section.endPoint.x, section.endPoint.y]);
 
-      const points = edgeLayout.points.map((p) => [p.x, p.y]);
+        const line = d3
+          .line()
+          .x((d) => d[0])
+          .y((d) => d[1]);
 
-      edgeGroup
-        .append("g")
-        .attr("class", "edge")
-        .append("path")
-        .attr("d", line(/** @type {any} */ (points)))
-        .attr("marker-end", "url(#arrow)");
-    });
+        edgeGroup
+          .append("g")
+          .attr("class", "edge")
+          .append("path")
+          .attr("d", line(points))
+          .attr("marker-end", "url(#arrow)");
+      }
+    }
 
     // Draw nodes
     const nodeGroup = root.append("g").attr("class", "nodes");
 
     nodes.forEach((n) => {
-      const layout = g.node(n.id);
-      if (!layout) return;
+      const elkNode = childMap.get(n.id);
+      if (!elkNode) return;
 
       const isCurrent = n.id === _currentNodeId;
       const isContracted = n.contractEnforced;
@@ -247,10 +229,7 @@
             (isCurrent ? " current" : "") +
             (isContracted ? " contracted" : ""),
         )
-        .attr(
-          "transform",
-          `translate(${layout.x - NODE_WIDTH / 2}, ${layout.y - NODE_HEIGHT / 2})`,
-        )
+        .attr("transform", `translate(${elkNode.x}, ${elkNode.y})`)
         .style("cursor", "pointer");
 
       // Background rect
@@ -266,7 +245,7 @@
       const maxNameLen = 18;
       const displayName =
         n.name.length > maxNameLen
-          ? n.name.slice(0, maxNameLen - 1) + "…"
+          ? n.name.slice(0, maxNameLen - 1) + "\u2026"
           : n.name;
       g2.append("text")
         .attr("class", "node-label")
@@ -289,7 +268,7 @@
           .attr("class", "node-badge")
           .attr("x", NODE_WIDTH - 8)
           .attr("y", 12)
-          .text("🛡");
+          .text("\uD83D\uDEE1");
       }
 
       // Test count badge (bottom-left)
@@ -314,30 +293,37 @@
           .text(n.testCount);
       }
 
-      // Click → open file
+      // Click -> open file
       g2.on("click", (event) => {
         event.stopPropagation();
         hideContextMenu();
         vscode.postMessage({ type: "openFile", nodeId: n.id });
       });
 
-      // Right-click → context menu
+      // Right-click -> context menu
       g2.on("contextmenu", (event) => {
         event.preventDefault();
         event.stopPropagation();
         showContextMenu(event.clientX, event.clientY, n.id);
       });
 
-      // Expand downstream handle (right edge, triangle pointing right)
+      // Expand downstream handle (right edge, circular + button)
       const downstreamHandle = nodeGroup
         .append("g")
         .attr("class", "expand-handle")
         .attr(
           "transform",
-          `translate(${layout.x + NODE_WIDTH / 2 + 2}, ${layout.y})`,
+          `translate(${elkNode.x + NODE_WIDTH + 12}, ${elkNode.y + NODE_HEIGHT / 2})`,
         );
 
-      downstreamHandle.append("polygon").attr("points", "0,-8 14,0 0,8");
+      downstreamHandle.append("circle").attr("r", 10).attr("class", "expand-circle");
+      downstreamHandle
+        .append("text")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("font-size", "14px")
+        .attr("class", "expand-glyph")
+        .text("+");
 
       downstreamHandle.on("click", (event) => {
         event.stopPropagation();
@@ -349,16 +335,23 @@
         });
       });
 
-      // Expand upstream handle (left edge, triangle pointing left)
+      // Expand upstream handle (left edge, circular + button)
       const upstreamHandle = nodeGroup
         .append("g")
         .attr("class", "expand-handle")
         .attr(
           "transform",
-          `translate(${layout.x - NODE_WIDTH / 2 - 2}, ${layout.y})`,
+          `translate(${elkNode.x - 12}, ${elkNode.y + NODE_HEIGHT / 2})`,
         );
 
-      upstreamHandle.append("polygon").attr("points", "0,-8 -14,0 0,8");
+      upstreamHandle.append("circle").attr("r", 10).attr("class", "expand-circle");
+      upstreamHandle
+        .append("text")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("font-size", "14px")
+        .attr("class", "expand-glyph")
+        .text("+");
 
       upstreamHandle.on("click", (event) => {
         event.stopPropagation();
@@ -376,10 +369,7 @@
     centerLabel.textContent = centerNode ? centerNode.name : "";
   }
 
-  // ---------------------------------------------------------------------------
   // Message handler
-  // ---------------------------------------------------------------------------
-
   window.addEventListener("message", (event) => {
     const message = event.data;
     if (!message || !message.type) return;
@@ -389,7 +379,7 @@
         _emptyMessage = message.emptyMessage ?? "No lineage data available.";
         _graphData = { nodes: message.nodes ?? [], edges: message.edges ?? [] };
         _currentNodeId = message.currentNodeId ?? null;
-        render();
+        void render();
         break;
 
       case "updateCenter":
@@ -400,11 +390,39 @@
             edges: message.edges ?? [],
           };
           _currentNodeId = message.currentNodeId ?? null;
-          render();
+          void render();
         }
         break;
+
+      case "mergeGraph": {
+        if (!_graphData) {
+          _graphData = { nodes: message.nodes ?? [], edges: message.edges ?? [] };
+        } else {
+          const existingIds = new Set(_graphData.nodes.map((n) => n.id));
+          for (const node of message.nodes ?? []) {
+            if (!existingIds.has(node.id)) {
+              _graphData.nodes.push(node);
+              existingIds.add(node.id);
+            }
+          }
+
+          const existingEdges = new Set(
+            _graphData.edges.map((e) => e.source + "\u2192" + e.target),
+          );
+          for (const edge of message.edges ?? []) {
+            const key = edge.source + "\u2192" + edge.target;
+            if (!existingEdges.has(key)) {
+              _graphData.edges.push(edge);
+              existingEdges.add(key);
+            }
+          }
+        }
+        void render();
+        break;
+      }
     }
   });
-  // Signal to the extension that the webview is ready to receive messages.
+
+  // Signal ready
   vscode.postMessage({ type: "ready" });
 })();

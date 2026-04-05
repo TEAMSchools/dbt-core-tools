@@ -291,13 +291,13 @@
     "publish": "npx @vscode/vsce publish"
   },
   "devDependencies": {
-    "@dagrejs/dagre": "^3.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.5.0",
     "@types/vscode": "^1.110.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
     "d3": "^7.9.0",
+    "elkjs": "^0.11.1",
     "esbuild": "^0.28.0",
     "mocha": "^11.7.5",
     "ts-node": "^10.9.2",

@@ -226,8 +226,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const d3Uri = webview.asWebviewUri(
       vscode.Uri.joinPath(webviewDir, "vendor", "d3.min.js"),
     );
-    const dagreUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "vendor", "dagre.min.js"),
+    const elkUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "vendor", "elk.bundled.js"),
     );
     const cspSource = webview.cspSource;
 
@@ -245,7 +245,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       .replace(/\{\{styleUri\}\}/g, styleUri.toString())
       .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
       .replace(/\{\{d3Uri\}\}/g, d3Uri.toString())
-      .replace(/\{\{dagreUri\}\}/g, dagreUri.toString())
+      .replace(/\{\{elkUri\}\}/g, elkUri.toString())
       .replace(/\{\{cspSource\}\}/g, cspSource);
 
     return html;
