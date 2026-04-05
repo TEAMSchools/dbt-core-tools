@@ -240,6 +240,12 @@
           "type": "integer",
           "default": 5,
           "description": "Row limit for dbt show"
+        },
+        "dbtCoreTools.propertiesLocation": {
+          "type": "string",
+          "enum": ["folder", "inline"],
+          "default": "folder",
+          "description": "Where to scaffold new properties YAML: 'folder' creates in a sibling properties/ directory, 'inline' creates next to the .sql file"
         }
       }
     },
