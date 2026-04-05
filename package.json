@@ -253,6 +253,15 @@
         }
       }
     },
+    "languages": [
+      {
+        "id": "jinja-sql",
+        "icon": {
+          "light": "./media/dbt-icon.svg",
+          "dark": "./media/dbt-icon.svg"
+        }
+      }
+    ],
     "configurationDefaults": {
       "files.associations": {
         "*.sql": "jinja-sql"
