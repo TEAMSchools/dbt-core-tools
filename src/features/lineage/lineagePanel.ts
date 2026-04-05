@@ -183,10 +183,9 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
         await project.ensureLoaded();
         const graphData = buildGraphData(project, nodeId, 1);
         this._postMessage({
-          type: "setGraph",
+          type: "mergeGraph",
           nodes: graphData.nodes,
           edges: graphData.edges,
-          currentNodeId: nodeId,
         });
         break;
       }
