@@ -36,6 +36,7 @@ import { LineageViewProvider } from "./features/lineage/lineagePanel";
 
 let _discovery: ProjectDiscovery | null = null;
 let _activeProject: DbtProject | null = null;
+let _outputChannel: vscode.OutputChannel | null = null;
 
 let _targetSelector: TargetSelector | null = null;
 let _deferToggle: DeferToggle | null = null;
@@ -60,6 +61,13 @@ export function getDeferToggle(): DeferToggle | null {
   return _deferToggle;
 }
 
+export function getOutputChannel(): vscode.OutputChannel {
+  if (!_outputChannel) {
+    throw new Error("dbt Core Tools: extension not yet activated");
+  }
+  return _outputChannel;
+}
+
 // ---------------------------------------------------------------------------
 // Activation
 // ---------------------------------------------------------------------------
@@ -69,6 +77,9 @@ export async function activate(
 ): Promise<void> {
   // Make the extension context available to model commands (e.g. showModel).
   setExtensionContext(context);
+
+  _outputChannel = vscode.window.createOutputChannel("dbt Core Tools");
+  context.subscriptions.push(_outputChannel);
 
   _discovery = new ProjectDiscovery();
 
@@ -269,7 +280,8 @@ async function updateContextKeys(
   _activeProject = _discovery ? _discovery.findProjectForFile(filePath) : null;
 
   const ext = filePath.split(".").pop()?.toLowerCase();
-  const isSql = ext === "sql";
+  const languageId = editor.document.languageId;
+  const isSql = ext === "sql" || languageId === "jinja-sql";
   const isYml = ext === "yml" || ext === "yaml";
   const inProject = _activeProject !== null;
 

@@ -146,9 +146,18 @@ export class DbtProject {
       this._onManifestChanged.fire(this);
       // If target/ was created after initial load, start watching now.
       this._startWatcher();
-    } catch {
-      // Manifest may not exist yet (before first dbt parse); leave as null.
+    } catch (err) {
       this.manifest = null;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getOutputChannel } =
+          require("../extension") as typeof import("../extension");
+        getOutputChannel().appendLine(
+          `[error] Failed to load manifest for ${this.name}: ${err}`,
+        );
+      } catch {
+        // Extension not yet activated; skip logging.
+      }
     }
   }
 

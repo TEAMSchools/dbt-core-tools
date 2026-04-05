@@ -20,7 +20,8 @@
   ],
   "main": "./dist/extension.js",
   "extensionDependencies": [
-    "redhat.vscode-yaml"
+    "redhat.vscode-yaml",
+    "samuelcolvin.jinjahtml"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
@@ -99,7 +100,7 @@
       {
         "command": "dbtCoreTools.stageExternalSources",
         "title": "dbt Core Tools: Stage External Sources",
-        "icon": "$(database)"
+        "icon": "$(open-in-product)"
       },
       {
         "command": "dbtCoreTools.showLineage",
@@ -109,7 +110,7 @@
       {
         "command": "dbtCoreTools.showCompiledSql",
         "title": "dbt Core Tools: Show Compiled SQL",
-        "icon": "$(split-horizontal)"
+        "icon": "$(file-code)"
       },
       {
         "command": "dbtCoreTools.toggleProperties",
@@ -247,6 +248,11 @@
           "default": "folder",
           "description": "Where to scaffold new properties YAML: 'folder' creates in a sibling properties/ directory, 'inline' creates next to the .sql file"
         }
+      }
+    },
+    "configurationDefaults": {
+      "files.associations": {
+        "*.sql": "jinja-sql"
       }
     },
     "yamlValidation": [

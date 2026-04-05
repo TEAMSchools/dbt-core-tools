@@ -113,6 +113,16 @@ export async function showModelPreview(
   const result = await executeAndCapture(command, project.rootPath);
 
   if (result.exitCode !== 0) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getOutputChannel } =
+        require("../../extension") as typeof import("../../extension");
+      getOutputChannel().appendLine(
+        `[error] dbt show failed for ${modelName}: ${result.stderr || result.stdout}`,
+      );
+    } catch {
+      // Extension not activated; skip.
+    }
     _panel.webview.postMessage({
       type: "error",
       modelName,
