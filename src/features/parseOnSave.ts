@@ -18,6 +18,21 @@ import { getDiscovery } from "../extension";
 /** Map from project.name → running dbt parse child process. */
 const _runningParses = new Map<string, ChildProcess>();
 
+/**
+ * Returns a promise that resolves when any in-flight parse for the given
+ * project finishes. Resolves immediately if no parse is running.
+ */
+export function waitForParse(projectName: string): Promise<void> {
+  const child = _runningParses.get(projectName);
+  if (!child) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    child.on("close", resolve);
+    child.on("error", resolve);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------

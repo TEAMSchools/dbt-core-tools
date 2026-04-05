@@ -76,4 +76,4 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - `dbt parse` does NOT populate `compiled_code` in manifest — use `dbt compile` for that
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
-- `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; compile must wait for parse to finish
+- `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; use `waitForParse(projectName)` from `parseOnSave.ts` before spawning compile

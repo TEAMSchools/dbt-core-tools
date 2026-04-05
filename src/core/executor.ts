@@ -178,7 +178,10 @@ function drainQueue(projectName: string): void {
     panel: vscode.TaskPanelKind.Shared,
   };
 
-  vscode.tasks.executeTask(task);
+  vscode.tasks.executeTask(task).then(undefined, () => {
+    _taskRunning.set(projectName, false);
+    drainQueue(projectName);
+  });
 }
 
 // ---------------------------------------------------------------------------

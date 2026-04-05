@@ -9,6 +9,7 @@ import * as vscode from "vscode";
 import { getActiveProject, getDiscovery } from "../extension";
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
 import { getCommandOptions } from "../commands/modelCommands";
+import { waitForParse } from "./parseOnSave";
 
 // ---------------------------------------------------------------------------
 // CompiledSqlProvider
@@ -139,6 +140,7 @@ export async function showCompiledSql(
         cancellable: false,
       },
       async () => {
+        await waitForParse(project.name);
         await executeAndCapture(compileCmd, project.rootPath);
         await project.reloadManifest();
       },
