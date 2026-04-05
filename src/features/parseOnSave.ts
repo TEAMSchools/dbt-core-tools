@@ -104,6 +104,11 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     if (_runningParses.get(project.name) === child) {
       _runningParses.delete(project.name);
     }
+
+    // Once parse finishes, compile if a compiled SQL document is open.
+    // Compile must run AFTER parse — both write to manifest.json, and
+    // dbt parse does NOT populate compiled_code (see CLAUDE.md gotchas).
+    spawnCompileIfNeeded(filePath, dbtCommand, project.rootPath, profilesDir);
   });
 
   child.on("error", () => {
@@ -112,34 +117,44 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
       _runningParses.delete(project.name);
     }
   });
+}
 
-  // If a compiled SQL document is open for this model, also compile it.
+function spawnCompileIfNeeded(
+  filePath: string,
+  dbtCommand: string,
+  projectRoot: string,
+  profilesDir: string,
+): void {
   const fileName = filePath.split(/[\\/]/).pop() ?? "";
   const modelName = fileName.replace(/\.sql$/i, "");
-  if (modelName) {
-    const hasOpenCompiledDoc = vscode.workspace.textDocuments.some(
-      (doc) =>
-        doc.uri.scheme === "dbt-compiled" &&
-        new URLSearchParams(doc.uri.query).get("model") === modelName,
-    );
+  if (!modelName) {
+    return;
+  }
 
-    if (hasOpenCompiledDoc) {
-      const compileCmd = buildDbtCommand({
-        dbtCommand,
-        subcommand: "compile",
-        projectDir: project.rootPath,
-        selector: modelName,
-        profilesDir: profilesDir || undefined,
-      });
+  const hasOpenCompiledDoc = vscode.workspace.textDocuments.some(
+    (doc) =>
+      doc.uri.scheme === "dbt-compiled" &&
+      new URLSearchParams(doc.uri.query).get("model") === modelName,
+  );
 
-      const [compileExe, ...compileArgs] = splitCommand(compileCmd);
-      if (compileExe) {
-        spawn(compileExe, compileArgs, {
-          cwd: project.rootPath,
-          stdio: "ignore",
-          detached: false,
-        });
-      }
-    }
+  if (!hasOpenCompiledDoc) {
+    return;
+  }
+
+  const compileCmd = buildDbtCommand({
+    dbtCommand,
+    subcommand: "compile",
+    projectDir: projectRoot,
+    selector: modelName,
+    profilesDir: profilesDir || undefined,
+  });
+
+  const [compileExe, ...compileArgs] = splitCommand(compileCmd);
+  if (compileExe) {
+    spawn(compileExe, compileArgs, {
+      cwd: projectRoot,
+      stdio: "ignore",
+      detached: false,
+    });
   }
 }

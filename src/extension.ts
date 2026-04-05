@@ -18,6 +18,7 @@ import {
   setExtensionContext,
 } from "./commands/modelCommands";
 import { stageExternalSources } from "./commands/stageExternal";
+import { initExecutor } from "./core/executor";
 import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
@@ -77,6 +78,9 @@ export async function activate(
 ): Promise<void> {
   // Make the extension context available to model commands (e.g. showModel).
   setExtensionContext(context);
+
+  // Initialize the task-based command executor.
+  initExecutor(context);
 
   _outputChannel = vscode.window.createOutputChannel("dbt Core Tools");
   context.subscriptions.push(_outputChannel);

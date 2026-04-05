@@ -103,101 +103,82 @@ export function buildDbtCommand(options: DbtCommandOptions): string {
 }
 
 // ---------------------------------------------------------------------------
-// Terminal executor (one terminal per project — command queuing)
+// Task-based executor (one task per command, per-project queuing)
 // ---------------------------------------------------------------------------
-
-/** Map from projectName → active terminal. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _runningTerminals = new Map<string, any>();
 
 /** Map from projectName → queued commands waiting to execute. */
 const _commandQueues = new Map<string, string[]>();
 
-/** Map from projectName → whether a command is currently running. */
-const _commandRunning = new Map<string, boolean>();
+/** Map from projectName → whether a task is currently running. */
+const _taskRunning = new Map<string, boolean>();
+
+const TASK_SOURCE = "dbt Core Tools";
+const TASK_NAME_PREFIX = "dbt: ";
 
 /**
- * Executes a command in a dedicated VS Code terminal for the given project.
- * If a command is already running, queues it for execution after completion.
- * Reuses the same terminal per project.
+ * Registers the `onDidEndTaskProcess` listener that drains command queues.
+ * Must be called once during `activate()`.
  */
-export function executeInTerminal(command: string, projectName: string): void {
+export function initExecutor(context: { subscriptions: { dispose(): void }[] }): void {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
 
-  // Check if a terminal exists and is still open
-  const existing = _runningTerminals.get(projectName);
-  if (existing) {
-    const allTerminals: readonly unknown[] = vscode.window.terminals;
-    if (!allTerminals.includes(existing)) {
-      _runningTerminals.delete(projectName);
-      _commandRunning.delete(projectName);
-      _commandQueues.delete(projectName);
+  const disposable = vscode.tasks.onDidEndTaskProcess((event) => {
+    const task = event.execution.task;
+    if (task.source !== TASK_SOURCE) {
+      return;
     }
-  }
-
-  const terminal = _runningTerminals.get(projectName);
-
-  if (terminal && _commandRunning.get(projectName)) {
-    // Queue the command for later execution
-    const queue = _commandQueues.get(projectName) ?? [];
-    queue.push(command);
-    _commandQueues.set(projectName, queue);
-    return;
-  }
-
-  if (terminal) {
-    // Terminal exists but no command running — send directly
-    _commandRunning.set(projectName, true);
-    terminal.show(true);
-    terminal.sendText(command);
-    return;
-  }
-
-  // Create a new terminal
-  const newTerminal = vscode.window.createTerminal({
-    name: `dbt: ${projectName}`,
-    cwd: undefined,
+    const projectName = task.name.startsWith(TASK_NAME_PREFIX)
+      ? task.name.slice(TASK_NAME_PREFIX.length)
+      : task.name;
+    _taskRunning.set(projectName, false);
+    drainQueue(projectName);
   });
-  _runningTerminals.set(projectName, newTerminal);
-  _commandRunning.set(projectName, true);
 
-  // Listen for command completion via shell integration
-  const execDisposable = vscode.window.onDidEndTerminalShellExecution?.(
-    (event: { terminal: unknown }) => {
-      if (event.terminal !== _runningTerminals.get(projectName)) {
-        return;
-      }
-      _commandRunning.set(projectName, false);
+  context.subscriptions.push(disposable);
+}
 
-      const queue = _commandQueues.get(projectName);
-      if (queue && queue.length > 0) {
-        const next = queue.shift()!;
-        _commandRunning.set(projectName, true);
-        const t = _runningTerminals.get(projectName);
-        if (t) {
-          t.show(true);
-          t.sendText(next);
-        }
-      }
-    },
+/**
+ * Executes a command in a VS Code task terminal for the given project.
+ * If a task is already running for the project, queues it for sequential execution.
+ */
+export function executeInTerminal(command: string, projectName: string): void {
+  const queue = _commandQueues.get(projectName) ?? [];
+  queue.push(command);
+  _commandQueues.set(projectName, queue);
+  drainQueue(projectName);
+}
+
+function drainQueue(projectName: string): void {
+  if (_taskRunning.get(projectName)) {
+    return;
+  }
+
+  const queue = _commandQueues.get(projectName);
+  if (!queue || queue.length === 0) {
+    return;
+  }
+
+  const command = queue.shift()!;
+  _taskRunning.set(projectName, true);
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const vscode = require("vscode") as VsCode;
+
+  const taskDef = { type: "dbt" };
+  const task = new vscode.Task(
+    taskDef,
+    vscode.TaskScope.Workspace,
+    `${TASK_NAME_PREFIX}${projectName}`,
+    TASK_SOURCE,
+    new vscode.ShellExecution(command),
   );
+  task.presentationOptions = {
+    reveal: vscode.TaskRevealKind.Always,
+    panel: vscode.TaskPanelKind.Shared,
+  };
 
-  // Clean up when the terminal is closed
-  const closeDisposable = vscode.window.onDidCloseTerminal(
-    (closed: unknown) => {
-      if (closed === newTerminal) {
-        _runningTerminals.delete(projectName);
-        _commandRunning.delete(projectName);
-        _commandQueues.delete(projectName);
-        closeDisposable.dispose();
-        execDisposable?.dispose();
-      }
-    },
-  );
-
-  newTerminal.show(true);
-  newTerminal.sendText(command);
+  vscode.tasks.executeTask(task);
 }
 
 // ---------------------------------------------------------------------------
