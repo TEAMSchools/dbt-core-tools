@@ -45,6 +45,11 @@
           "type": "webview",
           "id": "dbtCoreTools.lineageView",
           "name": "dbt Lineage"
+        },
+        {
+          "type": "webview",
+          "id": "dbtCoreTools.previewView",
+          "name": "dbt Preview"
         }
       ]
     },

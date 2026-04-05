@@ -143,6 +143,15 @@
           message.modelName ?? "",
         );
         break;
+      case "loading": {
+        header.textContent = "";
+        const h2 = document.createElement("h2");
+        h2.className = "preview-title";
+        h2.textContent = (message.modelName ?? "") + " \u2014 loading...";
+        header.appendChild(h2);
+        content.textContent = "Running dbt show...";
+        break;
+      }
       case "error":
         renderError(
           message.error ?? "",

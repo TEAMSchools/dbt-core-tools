@@ -1,7 +1,8 @@
 /**
  * Model Preview Panel for dbt Core Tools.
  *
- * Runs `dbt show` for the active model and displays results in a webview panel.
+ * Runs `dbt show` for the active model and displays results in a persistent
+ * WebviewView (bottom Panel area), following the same pattern as the lineage panel.
  */
 
 import * as vscode from "vscode";
@@ -13,101 +14,47 @@ import { getActiveProject, getOutputChannel } from "../../extension";
 import { getModelName, getCommandOptions } from "../../commands/modelCommands";
 
 // ---------------------------------------------------------------------------
-// Panel cache — one panel per model
+// PreviewViewProvider
 // ---------------------------------------------------------------------------
 
-/** Re-use an existing panel if the model name matches; otherwise replace it. */
-let _panel: vscode.WebviewPanel | undefined;
-let _panelModelName: string | undefined;
-let _panelReady = false;
-let _pendingMessage: unknown | null = null;
+export class PreviewViewProvider implements vscode.WebviewViewProvider {
+  public static readonly viewType = "dbtCoreTools.previewView";
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+  private _view: vscode.WebviewView | undefined;
+  private _ready = false;
+  private _pendingMessage: unknown | null = null;
 
-/**
- * Shows (or reveals) the model preview panel for the currently active SQL file.
- */
-export async function showModelPreview(
-  context: vscode.ExtensionContext,
-): Promise<void> {
-  // --- resolve project / model ---
-  const project = getActiveProject();
-  if (!project) {
-    vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
-    );
-    return;
-  }
+  constructor(private readonly _extensionUri: vscode.Uri) {}
 
-  const modelName = getModelName();
-  if (!modelName) {
-    return;
-  }
+  resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    _context: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken,
+  ): void {
+    this._view = webviewView;
+    this._ready = false;
 
-  // --- settings ---
-  const config = vscode.workspace.getConfiguration("dbtCoreTools");
-  const showLimit = config.get<number>("showLimit", 5);
-  const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
-    project.name,
-  );
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(
+          this._extensionUri,
+          "src",
+          "features",
+          "preview",
+          "webview",
+        ),
+      ],
+    };
 
-  // --- build command ---
-  const command = buildDbtCommand({
-    dbtCommand,
-    subcommand: "show",
-    projectDir: project.rootPath,
-    selector: modelName,
-    target,
-    profilesDir,
-    deferState,
-    limit: showLimit,
-  });
+    webviewView.webview.html = this._buildHtml(webviewView.webview);
 
-  // --- create or reveal webview panel ---
-  if (_panel && _panelModelName === modelName) {
-    _panel.reveal(vscode.ViewColumn.Two);
-  } else {
-    // Dispose old panel if it exists for a different model
-    _panel?.dispose();
-
-    _panel = vscode.window.createWebviewPanel(
-      "dbtCoreTools.preview",
-      `dbt show: ${modelName}`,
-      vscode.ViewColumn.Two,
-      {
-        enableScripts: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(
-            context.extensionUri,
-            "src",
-            "features",
-            "preview",
-            "webview",
-          ),
-        ],
-      },
-    );
-    _panelModelName = modelName;
-
-    // Clean up reference when panel is closed
-    _panel.onDidDispose(() => {
-      _panel = undefined;
-      _panelModelName = undefined;
-      _panelReady = false;
-      _pendingMessage = null;
-    });
-
-    // Handle messages from the webview (ready handshake + copy)
-    _panelReady = false;
-    _pendingMessage = null;
-    _panel.webview.onDidReceiveMessage(async (message) => {
+    webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message?.type === "ready") {
-        _panelReady = true;
-        if (_pendingMessage) {
-          _panel?.webview.postMessage(_pendingMessage);
-          _pendingMessage = null;
+        this._ready = true;
+        if (this._pendingMessage) {
+          webviewView.webview.postMessage(this._pendingMessage);
+          this._pendingMessage = null;
         }
         return;
       }
@@ -118,106 +65,150 @@ export async function showModelPreview(
         );
       }
     });
-
-    // Load and inject HTML
-    _panel.webview.html = buildWebviewHtml(context, _panel.webview);
   }
 
-  // --- run dbt show ---
-  const result = await executeAndCapture(command, project.rootPath);
+  // -------------------------------------------------------------------------
+  // Public API
+  // -------------------------------------------------------------------------
 
-  if (result.exitCode !== 0) {
-    try {
-      getOutputChannel().appendLine(
-        `[error] dbt show failed for ${modelName}: ${result.stderr || result.stdout}`,
+  /**
+   * Runs `dbt show` for the active model and posts results to the webview.
+   */
+  async showPreview(): Promise<void> {
+    // --- resolve project / model ---
+    const project = getActiveProject();
+    if (!project) {
+      vscode.window.showWarningMessage(
+        "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
       );
-    } catch {
-      // Extension not activated; skip.
+      return;
     }
-    postToPanel({
-      type: "error",
-      modelName,
-      command,
-      error:
-        result.stderr ||
-        result.stdout ||
-        "dbt show failed with a non-zero exit code.",
+
+    const modelName = getModelName();
+    if (!modelName) {
+      return;
+    }
+
+    // --- focus the panel ---
+    if (this._view) {
+      this._view.show(true);
+    }
+
+    // --- post loading message ---
+    this._postMessage({ type: "loading", modelName });
+
+    // --- settings ---
+    const config = vscode.workspace.getConfiguration("dbtCoreTools");
+    const showLimit = config.get<number>("showLimit", 5);
+    const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
+      project.name,
+    );
+
+    // --- build command ---
+    const command = buildDbtCommand({
+      dbtCommand,
+      subcommand: "show",
+      projectDir: project.rootPath,
+      selector: modelName,
+      target,
+      profilesDir,
+      deferState,
+      limit: showLimit,
     });
-    return;
+
+    // --- run dbt show ---
+    const result = await executeAndCapture(command, project.rootPath);
+
+    if (result.exitCode !== 0) {
+      try {
+        getOutputChannel().appendLine(
+          `[error] dbt show failed for ${modelName}: ${result.stderr || result.stdout}`,
+        );
+      } catch {
+        // Extension not activated; skip.
+      }
+      this._postMessage({
+        type: "error",
+        modelName,
+        command,
+        error:
+          result.stderr ||
+          result.stdout ||
+          "dbt show failed with a non-zero exit code.",
+      });
+      return;
+    }
+
+    // --- parse markdown table from stdout ---
+    const { columns, rows } = parseDbtShowOutput(result.stdout);
+
+    if (columns.length === 0) {
+      this._postMessage({
+        type: "error",
+        modelName,
+        command,
+        error:
+          result.stdout ||
+          result.stderr ||
+          "dbt show returned no tabular output.",
+      });
+      return;
+    }
+
+    this._postMessage({ type: "results", columns, rows, modelName });
   }
 
-  // --- parse markdown table from stdout ---
-  const { columns, rows } = parseDbtShowOutput(result.stdout);
+  // -------------------------------------------------------------------------
+  // Private helpers
+  // -------------------------------------------------------------------------
 
-  if (columns.length === 0) {
-    postToPanel({
-      type: "error",
-      modelName,
-      command,
-      error:
-        result.stdout ||
-        result.stderr ||
-        "dbt show returned no tabular output.",
-    });
-    return;
+  private _postMessage(message: unknown): void {
+    if (!this._view) return;
+    if (!this._ready) {
+      this._pendingMessage = message;
+      return;
+    }
+    this._view.webview.postMessage(message);
   }
 
-  postToPanel({ type: "results", columns, rows, modelName });
-}
+  private _buildHtml(webview: vscode.Webview): string {
+    const webviewDir = vscode.Uri.joinPath(
+      this._extensionUri,
+      "src",
+      "features",
+      "preview",
+      "webview",
+    );
 
-function postToPanel(message: unknown): void {
-  if (!_panel) return;
-  if (!_panelReady) {
-    _pendingMessage = message;
-    return;
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "styles.css"),
+    );
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "main.js"),
+    );
+    const cspSource = webview.cspSource;
+
+    // Generate a random nonce for CSP
+    const nonce = crypto.randomBytes(16).toString("hex");
+
+    const htmlPath = path.join(
+      this._extensionUri.fsPath,
+      "src",
+      "features",
+      "preview",
+      "webview",
+      "index.html",
+    );
+
+    let html = fs.readFileSync(htmlPath, "utf8");
+    html = html
+      .replace(/\{\{styleUri\}\}/g, styleUri.toString())
+      .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
+      .replace(/\{\{cspSource\}\}/g, cspSource)
+      .replace(/\{\{nonce\}\}/g, nonce);
+
+    return html;
   }
-  _panel.webview.postMessage(message);
-}
-
-// ---------------------------------------------------------------------------
-// HTML builder
-// ---------------------------------------------------------------------------
-
-function buildWebviewHtml(
-  context: vscode.ExtensionContext,
-  webview: vscode.Webview,
-): string {
-  const webviewDir = vscode.Uri.joinPath(
-    context.extensionUri,
-    "src",
-    "features",
-    "preview",
-    "webview",
-  );
-
-  const styleUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(webviewDir, "styles.css"),
-  );
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(webviewDir, "main.js"),
-  );
-  const cspSource = webview.cspSource;
-
-  // Generate a random nonce for CSP
-  const nonce = crypto.randomBytes(16).toString("hex");
-
-  const htmlPath = path.join(
-    context.extensionPath,
-    "src",
-    "features",
-    "preview",
-    "webview",
-    "index.html",
-  );
-
-  let html = fs.readFileSync(htmlPath, "utf8");
-  html = html
-    .replace(/\{\{styleUri\}\}/g, styleUri.toString())
-    .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
-    .replace(/\{\{cspSource\}\}/g, cspSource)
-    .replace(/\{\{nonce\}\}/g, nonce);
-
-  return html;
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +220,7 @@ function buildWebviewHtml(
  *
  * Expected format:
  *   | col1 | col2 |
- *   | ---- | ---- |   ← separator, index 1 — skipped
+ *   | ---- | ---- |   <- separator, index 1 -- skipped
  *   | val1 | val2 |
  */
 export function parseDbtShowOutput(stdout: string): {
@@ -247,7 +238,7 @@ export function parseDbtShowOutput(stdout: string): {
 
   /**
    * Splits a pipe-delimited table line into trimmed cell values.
-   * e.g. "| foo | bar |" → ["foo", "bar"]
+   * e.g. "| foo | bar |" -> ["foo", "bar"]
    */
   const parseLine = (line: string): string[] =>
     line
@@ -257,7 +248,7 @@ export function parseDbtShowOutput(stdout: string): {
 
   const columns = parseLine(tableLines[0]);
 
-  // tableLines[1] is the separator row (e.g. "| ---- | ---- |") — skip it
+  // tableLines[1] is the separator row (e.g. "| ---- | ---- |") -- skip it
   const dataLines = tableLines.slice(2);
   const rows = dataLines.map(parseLine);
 
