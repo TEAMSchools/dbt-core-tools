@@ -9,7 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { buildDbtCommand, executeAndCapture } from "../../core/executor";
-import { getActiveProject } from "../../extension";
+import { getActiveProject, getOutputChannel } from "../../extension";
 import { getModelName, getCommandOptions } from "../../commands/modelCommands";
 
 // ---------------------------------------------------------------------------
@@ -114,9 +114,6 @@ export async function showModelPreview(
 
   if (result.exitCode !== 0) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getOutputChannel } =
-        require("../../extension") as typeof import("../../extension");
       getOutputChannel().appendLine(
         `[error] dbt show failed for ${modelName}: ${result.stderr || result.stdout}`,
       );

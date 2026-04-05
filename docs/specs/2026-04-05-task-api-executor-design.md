@@ -14,9 +14,9 @@ Replace the terminal-reuse + shell-integration infrastructure with VS Code's Tas
 
 Two maps replace the current three (`_runningTerminals`, `_commandRunning`, `_commandQueues`):
 
-```
-_commandQueues: Map<string, string[]>   // projectName -> pending commands
-_taskRunning: Map<string, boolean>      // projectName -> whether a task is executing
+```typescript
+_commandQueues: Map<string, string[]>; // projectName -> pending commands
+_taskRunning: Map<string, boolean>; // projectName -> whether a task is executing
 ```
 
 ### `executeInTerminal(command, projectName)`

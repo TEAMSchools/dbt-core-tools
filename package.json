@@ -115,7 +115,7 @@
       {
         "command": "dbtCoreTools.toggleProperties",
         "title": "dbt Core Tools: Toggle SQL/Properties",
-        "icon": "$(file-code)"
+        "icon": "$(symbol-property)"
       },
       {
         "command": "dbtCoreTools.syncColumns",

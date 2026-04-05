@@ -8,6 +8,7 @@
 import * as vscode from "vscode";
 import { getActiveProject, getDiscovery } from "../extension";
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
+import { getCommandOptions } from "../commands/modelCommands";
 
 // ---------------------------------------------------------------------------
 // CompiledSqlProvider
@@ -120,15 +121,14 @@ export async function showCompiledSql(
   // Auto-compile if compiled_code is missing.
   const node = project.findNodeByName(modelName);
   if (!node || !node.compiled_code) {
-    const config = vscode.workspace.getConfiguration("dbtCoreTools");
-    const dbtCommand = config.get<string>("dbtCommand", "dbt");
-    const profilesDir = config.get<string>("profilesDir", "") || undefined;
+    const { dbtCommand, target, profilesDir } = getCommandOptions(project.name);
 
     const compileCmd = buildDbtCommand({
       dbtCommand,
       subcommand: "compile",
       projectDir: project.rootPath,
       selector: modelName,
+      target,
       profilesDir,
     });
 

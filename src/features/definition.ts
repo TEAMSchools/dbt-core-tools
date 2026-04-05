@@ -4,6 +4,7 @@
  */
 
 import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import { getDiscovery } from "../extension";
 import { safeJoinPath } from "../utils/paths";
@@ -17,8 +18,6 @@ function resolveMacroPath(
   project: import("../core/project").DbtProject,
   macro: { package_name: string; original_file_path: string },
 ): string | null {
-  const path = require("path") as typeof import("path");
-
   // Try direct resolution from project root
   let absPath = safeJoinPath(project.rootPath, macro.original_file_path);
   if (absPath && fs.existsSync(absPath)) {
@@ -110,7 +109,8 @@ export class DbtDefinitionProvider implements vscode.DefinitionProvider {
           }
         }
       }
-      return null;
+      // No macro matched — fall through to unqualified lookup so that
+      // false positives (e.g. adapter.dispatch) don't block resolution.
     }
 
     // Check unqualified word against macros (prefer project macros)
