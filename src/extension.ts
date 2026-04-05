@@ -12,15 +12,13 @@ import {
 } from "./commands/lifecycle";
 import {
   runModel,
-  runModelOptions,
   buildModel,
-  buildModelOptions,
   testModel,
-  testModelOptions,
   showModel,
   setExtensionContext,
 } from "./commands/modelCommands";
 import { stageExternalSources } from "./commands/stageExternal";
+import { initExecutor } from "./core/executor";
 import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
@@ -31,10 +29,7 @@ import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
 import { toggleProperties } from "./features/properties";
 import { syncColumns } from "./features/columnSync";
-import {
-  showLineage,
-  updateLineageCenter,
-} from "./features/lineage/lineagePanel";
+import { LineageViewProvider } from "./features/lineage/lineagePanel";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -42,6 +37,7 @@ import {
 
 let _discovery: ProjectDiscovery | null = null;
 let _activeProject: DbtProject | null = null;
+let _outputChannel: vscode.OutputChannel | null = null;
 
 let _targetSelector: TargetSelector | null = null;
 let _deferToggle: DeferToggle | null = null;
@@ -66,6 +62,13 @@ export function getDeferToggle(): DeferToggle | null {
   return _deferToggle;
 }
 
+export function getOutputChannel(): vscode.OutputChannel {
+  if (!_outputChannel) {
+    throw new Error("dbt Core Tools: extension not yet activated");
+  }
+  return _outputChannel;
+}
+
 // ---------------------------------------------------------------------------
 // Activation
 // ---------------------------------------------------------------------------
@@ -75,6 +78,12 @@ export async function activate(
 ): Promise<void> {
   // Make the extension context available to model commands (e.g. showModel).
   setExtensionContext(context);
+
+  // Initialize the task-based command executor.
+  initExecutor(context);
+
+  _outputChannel = vscode.window.createOutputChannel("dbt Core Tools");
+  context.subscriptions.push(_outputChannel);
 
   _discovery = new ProjectDiscovery();
 
@@ -86,6 +95,17 @@ export async function activate(
   // Discover projects in the workspace.
   await _discovery.discover();
 
+  // Register lineage view provider (declared early so the editor-change
+  // handler below can reference it without a temporal dead zone risk).
+  const lineageProvider = new LineageViewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      LineageViewProvider.viewType,
+      lineageProvider,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
   // Set initial context keys and lazy-load for whatever is open on startup.
   await updateContextKeys(vscode.window.activeTextEditor);
 
@@ -94,7 +114,7 @@ export async function activate(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       await updateContextKeys(editor);
       await updateStatusBar();
-      await updateLineageCenter(context);
+      await lineageProvider.updateCenter();
     }),
   );
 
@@ -125,20 +145,11 @@ export async function activate(
   // Register model commands.
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.runModel", () => runModel()),
-    vscode.commands.registerCommand("dbtCoreTools.runModelOptions", () =>
-      runModelOptions(),
-    ),
     vscode.commands.registerCommand("dbtCoreTools.buildModel", () =>
       buildModel(),
     ),
-    vscode.commands.registerCommand("dbtCoreTools.buildModelOptions", () =>
-      buildModelOptions(),
-    ),
     vscode.commands.registerCommand("dbtCoreTools.testModel", () =>
       testModel(),
-    ),
-    vscode.commands.registerCommand("dbtCoreTools.testModelOptions", () =>
-      testModelOptions(),
     ),
     vscode.commands.registerCommand("dbtCoreTools.showModel", () =>
       showModel(),
@@ -152,10 +163,10 @@ export async function activate(
     ),
   );
 
-  // Register lineage command.
+  // Register lineage command to focus the panel.
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.showLineage", () =>
-      showLineage(context),
+      vscode.commands.executeCommand("dbtCoreTools.lineageView.focus"),
     ),
   );
 
@@ -203,6 +214,7 @@ export async function activate(
           compiledSqlProvider.fireChange(doc.uri);
         }
       }
+      lineageProvider.updateCenter();
     });
     context.subscriptions.push({ dispose: disposer });
   }
@@ -273,7 +285,8 @@ async function updateContextKeys(
   _activeProject = _discovery ? _discovery.findProjectForFile(filePath) : null;
 
   const ext = filePath.split(".").pop()?.toLowerCase();
-  const isSql = ext === "sql";
+  const languageId = editor.document.languageId;
+  const isSql = ext === "sql" || languageId === "jinja-sql";
   const isYml = ext === "yml" || ext === "yaml";
   const inProject = _activeProject !== null;
 

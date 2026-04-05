@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck — webview script runs in browser context, not TS-checked
 /* global d3, dagre */
 (function () {
   const vscode = acquireVsCodeApi();
@@ -13,6 +13,7 @@
   let _currentNodeId = null;
   /** @type {boolean} */
   let _locked = false;
+  let _emptyMessage = "No lineage data available.";
 
   /**
    * @typedef {{ id: string, name: string, resourceType: string, materialization: string, contractEnforced: boolean }} GraphNode
@@ -134,7 +135,7 @@
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
         .attr("fill", "var(--vscode-descriptionForeground)")
-        .text("No lineage data available.");
+        .text(_emptyMessage);
       return;
     }
 
@@ -363,6 +364,7 @@
 
     switch (message.type) {
       case "setGraph":
+        _emptyMessage = message.emptyMessage ?? "No lineage data available.";
         _graphData = { nodes: message.nodes ?? [], edges: message.edges ?? [] };
         _currentNodeId = message.currentNodeId ?? null;
         render();
@@ -370,6 +372,7 @@
 
       case "updateCenter":
         if (!_locked) {
+          _emptyMessage = message.emptyMessage ?? "No lineage data available.";
           _graphData = {
             nodes: message.nodes ?? [],
             edges: message.edges ?? [],
@@ -380,4 +383,6 @@
         break;
     }
   });
+  // Signal to the extension that the webview is ready to receive messages.
+  vscode.postMessage({ type: "ready" });
 })();

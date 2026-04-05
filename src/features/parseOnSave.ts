@@ -9,7 +9,7 @@
 import * as vscode from "vscode";
 import { spawn, ChildProcess } from "child_process";
 import { buildDbtCommand, splitCommand } from "../core/executor";
-import { getDiscovery } from "../extension";
+import { getDiscovery, getOutputChannel } from "../extension";
 
 // ---------------------------------------------------------------------------
 // State
@@ -17,6 +17,29 @@ import { getDiscovery } from "../extension";
 
 /** Map from project.name → running dbt parse child process. */
 const _runningParses = new Map<string, ChildProcess>();
+
+/** Map from modelName → running dbt compile child process. */
+const _runningCompiles = new Map<string, ChildProcess>();
+
+/**
+ * Returns a promise that resolves when any in-flight parse for the given
+ * project finishes. Resolves immediately if no parse is running.
+ */
+export function waitForParse(projectName: string): Promise<void> {
+  const child = _runningParses.get(projectName);
+  if (!child || child.exitCode !== null) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const timeout = setTimeout(resolve, 30_000);
+    const done = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    child.on("close", done);
+    child.on("error", done);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Registration
@@ -104,12 +127,87 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     if (_runningParses.get(project.name) === child) {
       _runningParses.delete(project.name);
     }
+
+    // Once parse finishes, compile if a compiled SQL document is open.
+    // Compile must run AFTER parse — both write to manifest.json, and
+    // dbt parse does NOT populate compiled_code (see CLAUDE.md gotchas).
+    spawnCompileIfNeeded(filePath, dbtCommand, project.rootPath, profilesDir);
   });
 
-  child.on("error", () => {
-    // Silently swallow spawn errors (e.g. dbt not on PATH).
+  child.on("error", (err) => {
+    try {
+      getOutputChannel().appendLine(
+        `[error] dbt parse spawn failed for ${project.name}: ${err}`,
+      );
+    } catch {
+      // Extension not activated; skip.
+    }
     if (_runningParses.get(project.name) === child) {
       _runningParses.delete(project.name);
+    }
+  });
+}
+
+function spawnCompileIfNeeded(
+  filePath: string,
+  dbtCommand: string,
+  projectRoot: string,
+  profilesDir: string,
+): void {
+  const fileName = filePath.split(/[\\/]/).pop() ?? "";
+  const modelName = fileName.replace(/\.sql$/i, "");
+  if (!modelName) {
+    return;
+  }
+
+  const hasOpenCompiledDoc = vscode.workspace.textDocuments.some(
+    (doc) =>
+      doc.uri.scheme === "dbt-compiled" &&
+      new URLSearchParams(doc.uri.query).get("model") === modelName,
+  );
+
+  if (!hasOpenCompiledDoc) {
+    return;
+  }
+
+  const compileCmd = buildDbtCommand({
+    dbtCommand,
+    subcommand: "compile",
+    projectDir: projectRoot,
+    selector: modelName,
+    profilesDir: profilesDir || undefined,
+  });
+
+  const [compileExe, ...compileArgs] = splitCommand(compileCmd);
+  if (!compileExe) {
+    return;
+  }
+
+  // Cancel any in-flight compile for this model.
+  const existing = _runningCompiles.get(modelName);
+  if (existing && !existing.killed) {
+    try {
+      existing.kill("SIGINT");
+    } catch {
+      // Process may have already exited; ignore.
+    }
+  }
+
+  const compileChild = spawn(compileExe, compileArgs, {
+    cwd: projectRoot,
+    stdio: "ignore",
+    detached: false,
+  });
+  _runningCompiles.set(modelName, compileChild);
+
+  compileChild.on("close", () => {
+    if (_runningCompiles.get(modelName) === compileChild) {
+      _runningCompiles.delete(modelName);
+    }
+  });
+  compileChild.on("error", () => {
+    if (_runningCompiles.get(modelName) === compileChild) {
+      _runningCompiles.delete(modelName);
     }
   });
 }

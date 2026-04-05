@@ -9,7 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { buildDbtCommand, executeAndCapture } from "../../core/executor";
-import { getActiveProject } from "../../extension";
+import { getActiveProject, getOutputChannel } from "../../extension";
 import { getModelName, getCommandOptions } from "../../commands/modelCommands";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +19,8 @@ import { getModelName, getCommandOptions } from "../../commands/modelCommands";
 /** Re-use an existing panel if the model name matches; otherwise replace it. */
 let _panel: vscode.WebviewPanel | undefined;
 let _panelModelName: string | undefined;
+let _panelReady = false;
+let _pendingMessage: unknown | null = null;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -93,10 +95,22 @@ export async function showModelPreview(
     _panel.onDidDispose(() => {
       _panel = undefined;
       _panelModelName = undefined;
+      _panelReady = false;
+      _pendingMessage = null;
     });
 
-    // Handle messages from the webview (e.g. copy to clipboard)
+    // Handle messages from the webview (ready handshake + copy)
+    _panelReady = false;
+    _pendingMessage = null;
     _panel.webview.onDidReceiveMessage(async (message) => {
+      if (message?.type === "ready") {
+        _panelReady = true;
+        if (_pendingMessage) {
+          _panel?.webview.postMessage(_pendingMessage);
+          _pendingMessage = null;
+        }
+        return;
+      }
       if (message?.type === "copy" && typeof message.text === "string") {
         await vscode.env.clipboard.writeText(message.text);
         vscode.window.showInformationMessage(
@@ -113,7 +127,14 @@ export async function showModelPreview(
   const result = await executeAndCapture(command, project.rootPath);
 
   if (result.exitCode !== 0) {
-    _panel.webview.postMessage({
+    try {
+      getOutputChannel().appendLine(
+        `[error] dbt show failed for ${modelName}: ${result.stderr || result.stdout}`,
+      );
+    } catch {
+      // Extension not activated; skip.
+    }
+    postToPanel({
       type: "error",
       modelName,
       command,
@@ -128,7 +149,29 @@ export async function showModelPreview(
   // --- parse markdown table from stdout ---
   const { columns, rows } = parseDbtShowOutput(result.stdout);
 
-  _panel.webview.postMessage({ type: "results", columns, rows, modelName });
+  if (columns.length === 0) {
+    postToPanel({
+      type: "error",
+      modelName,
+      command,
+      error:
+        result.stdout ||
+        result.stderr ||
+        "dbt show returned no tabular output.",
+    });
+    return;
+  }
+
+  postToPanel({ type: "results", columns, rows, modelName });
+}
+
+function postToPanel(message: unknown): void {
+  if (!_panel) return;
+  if (!_panelReady) {
+    _pendingMessage = message;
+    return;
+  }
+  _panel.webview.postMessage(message);
 }
 
 // ---------------------------------------------------------------------------

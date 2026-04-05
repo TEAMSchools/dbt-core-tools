@@ -5,6 +5,7 @@ import {
   extractSourceCalls,
   findRefAtPosition,
   findSourceAtPosition,
+  findQualifiedMacroAtPosition,
 } from "../../src/utils/patterns";
 
 describe("extractRef", () => {
@@ -237,6 +238,41 @@ describe("findSourceAtPosition", () => {
     assert.deepStrictEqual(resultB, {
       sourceName: "schema_b",
       tableName: "tbl_2",
+    });
+  });
+});
+
+describe("findQualifiedMacroAtPosition", () => {
+  it("extracts package and macro name from qualified reference", () => {
+    const line = "{{ dbt_utils.union_relations(...) }}";
+    const result = findQualifiedMacroAtPosition(line, 15);
+    assert.deepStrictEqual(result, {
+      packageName: "dbt_utils",
+      macroName: "union_relations",
+    });
+  });
+
+  it("returns null when cursor is outside the reference", () => {
+    const line = "select {{ dbt_utils.union_relations() }} from table";
+    const result = findQualifiedMacroAtPosition(line, 2);
+    assert.strictEqual(result, null);
+  });
+
+  it("extracts when cursor is on package name", () => {
+    const line = "{{ dbt_utils.union_relations() }}";
+    const result = findQualifiedMacroAtPosition(line, 5);
+    assert.deepStrictEqual(result, {
+      packageName: "dbt_utils",
+      macroName: "union_relations",
+    });
+  });
+
+  it("extracts when cursor is on macro name", () => {
+    const line = "{{ dbt_utils.union_relations() }}";
+    const result = findQualifiedMacroAtPosition(line, 20);
+    assert.deepStrictEqual(result, {
+      packageName: "dbt_utils",
+      macroName: "union_relations",
     });
   });
 });

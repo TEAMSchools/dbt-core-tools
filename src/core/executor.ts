@@ -103,56 +103,90 @@ export function buildDbtCommand(options: DbtCommandOptions): string {
 }
 
 // ---------------------------------------------------------------------------
-// Terminal executor (one terminal per project — concurrency guard)
+// Task-based executor (one task per command, per-project queuing)
 // ---------------------------------------------------------------------------
 
-/** Map from projectName → active terminal. Keyed by project name. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _runningTerminals = new Map<string, any>();
+/** Map from projectName → queued commands waiting to execute. */
+const _commandQueues = new Map<string, string[]>();
+
+/** Map from projectName → whether a task is currently running. */
+const _taskRunning = new Map<string, boolean>();
+
+const TASK_SOURCE = "dbt Core Tools";
+const TASK_NAME_PREFIX = "dbt: ";
 
 /**
- * Executes a command in a dedicated VS Code terminal for the given project.
- * If a terminal for the project is already running (still open), shows a warning.
- *
- * The vscode module is required lazily so this file can be loaded in unit tests
- * without the VS Code runtime present.
+ * Registers the `onDidEndTaskProcess` listener that drains command queues.
+ * Must be called once during `activate()`.
  */
-export function executeInTerminal(command: string, projectName: string): void {
+export function initExecutor(context: {
+  subscriptions: { dispose(): void }[];
+}): void {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
 
-  // Check if an existing terminal for this project is still open
-  const existing = _runningTerminals.get(projectName);
-  if (existing) {
-    const allTerminals: readonly unknown[] = vscode.window.terminals;
-    const stillOpen = allTerminals.includes(existing);
-    if (stillOpen) {
-      vscode.window.showWarningMessage(
-        `dbt Core Tools: A command is already running for project "${projectName}". ` +
-          `Please wait for it to complete or close its terminal.`,
-      );
+  const disposable = vscode.tasks.onDidEndTaskProcess((event) => {
+    const task = event.execution.task;
+    if (task.source !== TASK_SOURCE) {
       return;
     }
-    // Terminal was closed externally — clean up
-    _runningTerminals.delete(projectName);
+    const projectName = task.name.startsWith(TASK_NAME_PREFIX)
+      ? task.name.slice(TASK_NAME_PREFIX.length)
+      : task.name;
+    _taskRunning.set(projectName, false);
+    drainQueue(projectName);
+  });
+
+  context.subscriptions.push(disposable);
+}
+
+/**
+ * Executes a command in a VS Code task terminal for the given project.
+ * If a task is already running for the project, queues it for sequential execution.
+ */
+export function executeInTerminal(command: string, projectName: string): void {
+  const queue = _commandQueues.get(projectName) ?? [];
+  queue.push(command);
+  _commandQueues.set(projectName, queue);
+  drainQueue(projectName);
+}
+
+function drainQueue(projectName: string): void {
+  if (_taskRunning.get(projectName)) {
+    return;
   }
 
-  const terminal = vscode.window.createTerminal({
-    name: `dbt: ${projectName}`,
-    cwd: undefined,
-  });
-  _runningTerminals.set(projectName, terminal);
+  const queue = _commandQueues.get(projectName);
+  if (!queue || queue.length === 0) {
+    return;
+  }
 
-  // Clean up mapping when the terminal is closed
-  const disposable = vscode.window.onDidCloseTerminal((closed: unknown) => {
-    if (closed === terminal) {
-      _runningTerminals.delete(projectName);
-      disposable.dispose();
-    }
-  });
+  const command = queue.shift()!;
+  _taskRunning.set(projectName, true);
 
-  terminal.show(true /* preserveFocus */);
-  terminal.sendText(command);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const vscode = require("vscode") as VsCode;
+
+  const taskDef = { type: "dbt" };
+  const task = new vscode.Task(
+    taskDef,
+    vscode.TaskScope.Workspace,
+    `${TASK_NAME_PREFIX}${projectName}`,
+    TASK_SOURCE,
+    new vscode.ShellExecution(command),
+  );
+  task.presentationOptions = {
+    reveal: vscode.TaskRevealKind.Always,
+    panel: vscode.TaskPanelKind.Shared,
+  };
+
+  vscode.tasks.executeTask(task).then(undefined, (err: unknown) => {
+    vscode.window.showWarningMessage(
+      `dbt Core Tools: Failed to execute task for "${projectName}": ${err}`,
+    );
+    _taskRunning.set(projectName, false);
+    drainQueue(projectName);
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -1,17 +1,14 @@
 /**
  * Model commands for dbt Core Tools.
  *
- * Provides run/build/test/show commands, each with and without the options picker.
+ * Provides run/build/test/show commands with a two-step options picker.
  */
 
+import * as path from "path";
 import * as vscode from "vscode";
 import { buildDbtCommand, executeInTerminal } from "../core/executor";
-import { getActiveProject } from "../extension";
-import {
-  buildSelector,
-  showOptionsPicker,
-  PickerOptions,
-} from "./optionsPicker";
+import { getActiveProject, getDeferToggle } from "../extension";
+import { buildSelector, showOptionsPicker } from "./optionsPicker";
 import { showModelPreview } from "../features/preview/previewPanel";
 
 // ---------------------------------------------------------------------------
@@ -68,17 +65,25 @@ export function getCommandOptions(projectName: string): {
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
   const profilesDir = config.get<string>("profilesDir", "") || undefined;
   const target = config.get<Record<string, string>>("target", {})[projectName];
-  const deferManifestPath = config.get<Record<string, string>>(
-    "deferManifestPath",
-    {},
-  )[projectName];
 
-  return {
-    dbtCommand,
-    target,
-    profilesDir,
-    deferState: deferManifestPath || undefined,
-  };
+  // Only include deferState when the toggle is actually on.
+  let deferState: string | undefined;
+  const deferToggle = getDeferToggle();
+  if (deferToggle && deferToggle.isDeferred(projectName)) {
+    const deferManifestPath = config.get<Record<string, string>>(
+      "deferManifestPath",
+      {},
+    )[projectName];
+    if (deferManifestPath) {
+      // Resolve to absolute path so --state works regardless of terminal cwd.
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+      deferState = path.isAbsolute(deferManifestPath)
+        ? deferManifestPath
+        : path.resolve(wsRoot, deferManifestPath);
+    }
+  }
+
+  return { dbtCommand, target, profilesDir, deferState };
 }
 
 // ---------------------------------------------------------------------------
@@ -86,16 +91,12 @@ export function getCommandOptions(projectName: string): {
 // ---------------------------------------------------------------------------
 
 /**
- * Central helper that resolves the model/project, optionally shows the options
+ * Central helper that resolves the model/project, shows the two-step options
  * picker, builds the dbt command, and executes it in a terminal.
  *
  * @param subcommand  The dbt subcommand (e.g. "run", "build", "test").
- * @param withOptions Whether to show the options picker before running.
  */
-export async function runModelCommand(
-  subcommand: string,
-  withOptions: boolean,
-): Promise<void> {
+export async function runModelCommand(subcommand: string): Promise<void> {
   const project = getActiveProject();
   if (!project) {
     vscode.window.showWarningMessage(
@@ -109,14 +110,9 @@ export async function runModelCommand(
     return;
   }
 
-  let pickerOptions: PickerOptions = {};
-  if (withOptions) {
-    const result = await showOptionsPicker();
-    if (result === undefined) {
-      // User cancelled
-      return;
-    }
-    pickerOptions = result;
+  const pickerOptions = await showOptionsPicker(subcommand);
+  if (pickerOptions === undefined) {
+    return;
   }
 
   const selector = buildSelector(modelName, pickerOptions);
@@ -142,26 +138,9 @@ export async function runModelCommand(
 // Exported command handlers
 // ---------------------------------------------------------------------------
 
-/** Runs `dbt run` for the active model. */
-export const runModel = (): Promise<void> => runModelCommand("run", false);
-
-/** Runs `dbt run` with the options picker. */
-export const runModelOptions = (): Promise<void> =>
-  runModelCommand("run", true);
-
-/** Runs `dbt build` for the active model. */
-export const buildModel = (): Promise<void> => runModelCommand("build", false);
-
-/** Runs `dbt build` with the options picker. */
-export const buildModelOptions = (): Promise<void> =>
-  runModelCommand("build", true);
-
-/** Runs `dbt test` for the active model. */
-export const testModel = (): Promise<void> => runModelCommand("test", false);
-
-/** Runs `dbt test` with the options picker. */
-export const testModelOptions = (): Promise<void> =>
-  runModelCommand("test", true);
+export const runModel = (): Promise<void> => runModelCommand("run");
+export const buildModel = (): Promise<void> => runModelCommand("build");
+export const testModel = (): Promise<void> => runModelCommand("test");
 
 /** Shows the model preview panel for the active SQL file. */
 export async function showModel(): Promise<void> {

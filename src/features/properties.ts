@@ -142,9 +142,21 @@ async function _sqlToProperties(
       editorYml.selection = new vscode.Selection(pos, pos);
     }
   } else {
-    // Scaffold a new .yml in the same directory.
+    // Scaffold a new .yml file.
     const dir = path.dirname(filePath);
-    const ymlPath = path.join(dir, `${modelName}.yml`);
+    const config = vscode.workspace.getConfiguration("dbtCoreTools");
+    const location = config.get<string>("propertiesLocation", "folder");
+
+    let ymlPath: string;
+    if (location === "folder") {
+      const propsDir = path.join(dir, "properties");
+      if (!fs.existsSync(propsDir)) {
+        await fs.promises.mkdir(propsDir, { recursive: true });
+      }
+      ymlPath = path.join(propsDir, `${modelName}.yml`);
+    } else {
+      ymlPath = path.join(dir, `${modelName}.yml`);
+    }
 
     const columnNames = node ? Object.keys(node.columns) : [];
     const content = scaffoldYaml(modelName, columnNames);

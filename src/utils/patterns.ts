@@ -102,3 +102,32 @@ export function findSourceAtPosition(
 
   return null;
 }
+
+export interface QualifiedMacroRef {
+  packageName: string;
+  macroName: string;
+}
+
+const QUALIFIED_MACRO_SOURCE = String.raw`([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\s*\(`;
+
+/**
+ * Returns `{packageName, macroName}` if the cursor is within a `package.macro()`
+ * reference on the given line. Returns null otherwise.
+ */
+export function findQualifiedMacroAtPosition(
+  line: string,
+  character: number,
+): QualifiedMacroRef | null {
+  const pattern = new RegExp(QUALIFIED_MACRO_SOURCE, "g");
+
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(line)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length - 1;
+    if (character >= start && character <= end) {
+      return { packageName: match[1], macroName: match[2] };
+    }
+  }
+
+  return null;
+}

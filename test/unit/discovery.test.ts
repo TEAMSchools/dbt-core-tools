@@ -9,7 +9,11 @@
 
 import * as assert from "assert";
 import * as path from "path";
-import { DbtProject, extractProjectName } from "../../src/core/project";
+import {
+  DbtProject,
+  extractProjectName,
+  extractProfileName,
+} from "../../src/core/project";
 import { findProjectForFile } from "../../src/core/discovery";
 
 // ---------------------------------------------------------------------------
@@ -119,6 +123,26 @@ describe("extractProjectName", () => {
     // the regex anchors to start of line with ^
     const yml = `models:\n  name: nested_value\nname: top_level\n`;
     assert.strictEqual(extractProjectName(yml), "top_level");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractProfileName
+// ---------------------------------------------------------------------------
+describe("extractProfileName", () => {
+  it("extracts profile name from dbt_project.yml content", () => {
+    const yml = "name: my_project\nversion: 1.0.0\nprofile: kipptaf\n";
+    assert.strictEqual(extractProfileName(yml), "kipptaf");
+  });
+
+  it("returns null when profile key is missing", () => {
+    const yml = "name: my_project\nversion: 1.0.0\n";
+    assert.strictEqual(extractProfileName(yml), null);
+  });
+
+  it("handles quoted profile names", () => {
+    const yml = "name: my_project\nprofile: 'kipptaf'\n";
+    assert.strictEqual(extractProfileName(yml), "kipptaf");
   });
 });
 

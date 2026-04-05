@@ -6,7 +6,10 @@
  */
 
 import * as vscode from "vscode";
-import { getActiveProject, getDiscovery } from "../extension";
+import { getActiveProject, getDiscovery, getOutputChannel } from "../extension";
+import { buildDbtCommand, executeAndCapture } from "../core/executor";
+import { getCommandOptions } from "../commands/modelCommands";
+import { waitForParse } from "./parseOnSave";
 
 // ---------------------------------------------------------------------------
 // CompiledSqlProvider
@@ -48,7 +51,7 @@ export class CompiledSqlProvider implements vscode.TextDocumentContentProvider {
     }
 
     if (!node.compiled_code) {
-      return `-- dbt Core Tools: model "${modelName}" has no compiled SQL.\n-- Run dbt parse to compile the project.`;
+      return `-- dbt Core Tools: model "${modelName}" has no compiled SQL.\n-- Compiling... (if this persists, run dbt compile manually)`;
     }
 
     return node.compiled_code;
@@ -96,10 +99,8 @@ export async function showCompiledSql(
     return;
   }
 
-  // Derive model name from the file name (strip all extensions).
   const fileName = filePath.split(/[\\/]/).pop() ?? "";
   const modelName = fileName.replace(/\.sql$/i, "");
-
   if (!modelName) {
     vscode.window.showWarningMessage(
       "dbt Core Tools: Could not determine model name from file.",
@@ -118,10 +119,38 @@ export async function showCompiledSql(
   });
   await vscode.languages.setTextDocumentLanguage(doc, "sql");
 
-  // If the node is absent from the manifest, trigger a parse so the user
-  // gets compiled SQL on the next save.
+  // Auto-compile if compiled_code is missing.
   const node = project.findNodeByName(modelName);
-  if (!node) {
-    void vscode.commands.executeCommand("dbtCoreTools.parseProject");
+  if (!node || !node.compiled_code) {
+    const { dbtCommand, target, profilesDir } = getCommandOptions(project.name);
+
+    const compileCmd = buildDbtCommand({
+      dbtCommand,
+      subcommand: "compile",
+      projectDir: project.rootPath,
+      selector: modelName,
+      target,
+      profilesDir,
+    });
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `dbt Core Tools: Compiling ${modelName}...`,
+        cancellable: false,
+      },
+      async () => {
+        await waitForParse(project.name);
+        const result = await executeAndCapture(compileCmd, project.rootPath);
+        if (result.exitCode !== 0) {
+          getOutputChannel().appendLine(
+            `[error] dbt compile failed for ${modelName}: ${result.stderr || result.stdout}`,
+          );
+        }
+        await project.reloadManifest();
+      },
+    );
+
+    provider.fireChange(uri);
   }
 }

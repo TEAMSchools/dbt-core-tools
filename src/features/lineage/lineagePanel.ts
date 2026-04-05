@@ -1,8 +1,8 @@
 /**
- * Lineage Viewer Panel for dbt Core Tools.
+ * Lineage Viewer — persistent bottom panel using WebviewViewProvider.
  *
  * Renders a DAG of upstream/downstream dependencies for the active model
- * using D3.js and dagre in a webview panel.
+ * using D3.js and dagre in a webview view (Panel area).
  */
 
 import * as vscode from "vscode";
@@ -35,120 +35,224 @@ export interface GraphData {
 }
 
 // ---------------------------------------------------------------------------
-// Panel cache — one lineage panel shared across models
+// LineageViewProvider
 // ---------------------------------------------------------------------------
 
-let _panel: vscode.WebviewPanel | undefined;
+export class LineageViewProvider implements vscode.WebviewViewProvider {
+  public static readonly viewType = "dbtCoreTools.lineageView";
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+  private _view: vscode.WebviewView | undefined;
+  private _ready = false;
+  private _pendingMessage: unknown | null = null;
 
-/**
- * Shows (or reveals) the lineage panel for the currently active SQL file.
- */
-export async function showLineage(
-  context: vscode.ExtensionContext,
-): Promise<void> {
-  const project = getActiveProject();
-  if (!project) {
-    vscode.window.showWarningMessage(
-      "dbt Core Tools: No active dbt project. Open a file inside a dbt project first.",
-    );
-    return;
-  }
+  constructor(private readonly _extensionUri: vscode.Uri) {}
 
-  await project.ensureLoaded();
+  resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    _context: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken,
+  ): void {
+    this._view = webviewView;
+    this._ready = false;
 
-  const nodeId = getActiveNodeId(project);
-  if (!nodeId) {
-    vscode.window.showWarningMessage(
-      "dbt Core Tools: Could not find a dbt model for the current file.",
-    );
-    return;
-  }
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(
+          this._extensionUri,
+          "src",
+          "features",
+          "lineage",
+          "webview",
+        ),
+      ],
+    };
 
-  if (_panel) {
-    _panel.reveal(vscode.ViewColumn.Two);
-  } else {
-    _panel = vscode.window.createWebviewPanel(
-      "dbtCoreTools.lineage",
-      "dbt Lineage",
-      vscode.ViewColumn.Two,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(
-            context.extensionUri,
-            "src",
-            "features",
-            "lineage",
-            "webview",
-          ),
-        ],
-      },
-    );
+    webviewView.webview.html = this._buildHtml(webviewView.webview);
 
-    _panel.onDidDispose(() => {
-      _panel = undefined;
+    webviewView.webview.onDidReceiveMessage(async (message) => {
+      if (message?.type === "ready") {
+        this._ready = true;
+        if (this._pendingMessage) {
+          webviewView.webview.postMessage(this._pendingMessage);
+          this._pendingMessage = null;
+        }
+        return;
+      }
+      await this._handleMessage(message);
     });
 
-    _panel.webview.onDidReceiveMessage(async (message) => {
-      await handleWebviewMessage(message, context);
+    webviewView.onDidDispose(() => {
+      this._view = undefined;
+      this._ready = false;
+      this._pendingMessage = null;
     });
 
-    _panel.webview.html = buildWebviewHtml(context, _panel.webview);
+    // Send initial graph data for whatever file is currently open.
+    this.updateCenter();
   }
 
-  const graphData = buildGraphData(project, nodeId, 1);
-  _panel.webview.postMessage({
-    type: "setGraph",
-    nodes: graphData.nodes,
-    edges: graphData.edges,
-    currentNodeId: nodeId,
-  });
-}
+  /**
+   * Updates the lineage graph for the currently active editor.
+   * Called on editor focus change and manifest reload.
+   */
+  async updateCenter(): Promise<void> {
+    if (!this._view) {
+      return;
+    }
 
-/**
- * Called when the active text editor changes.
- * If the panel is open and not locked, updates it to center on the new model.
- */
-export async function updateLineageCenter(
-  context: vscode.ExtensionContext,
-): Promise<void> {
-  if (!_panel) {
-    return;
+    const project = getActiveProject();
+    if (!project) {
+      this._postMessage({
+        type: "updateCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No active dbt project",
+      });
+      return;
+    }
+
+    await project.ensureLoaded();
+
+    const nodeId = this._getActiveNodeId(project);
+    if (!nodeId) {
+      this._postMessage({
+        type: "updateCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No dbt model found for this file",
+      });
+      return;
+    }
+
+    const graphData = buildGraphData(project, nodeId, 1);
+    this._postMessage({
+      type: "updateCenter",
+      nodes: graphData.nodes,
+      edges: graphData.edges,
+      currentNodeId: nodeId,
+    });
   }
 
-  const project = getActiveProject();
-  if (!project) {
-    return;
+  private _postMessage(message: unknown): void {
+    if (!this._view) {
+      return;
+    }
+    if (!this._ready) {
+      this._pendingMessage = message;
+      return;
+    }
+    this._view.webview.postMessage(message);
   }
 
-  await project.ensureLoaded();
-
-  const nodeId = getActiveNodeId(project);
-  if (!nodeId) {
-    return;
+  private _getActiveNodeId(project: DbtProject): string | null {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return null;
+    const filePath = editor.document.uri.fsPath;
+    const node = project.findNodeByFilePath(filePath);
+    return node?.unique_id ?? null;
   }
 
-  const graphData = buildGraphData(project, nodeId, 1);
-  _panel.webview.postMessage({
-    type: "updateCenter",
-    nodes: graphData.nodes,
-    edges: graphData.edges,
-    currentNodeId: nodeId,
-  });
+  private async _handleMessage(message: {
+    type: string;
+    nodeId?: string;
+    direction?: string;
+  }): Promise<void> {
+    if (!message || !message.type) return;
+    const { type, nodeId } = message;
+
+    switch (type) {
+      case "openFile": {
+        if (!nodeId) return;
+        const filePath = resolveNodeFilePath(nodeId);
+        if (filePath) {
+          const doc = await vscode.workspace.openTextDocument(filePath);
+          await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+        }
+        break;
+      }
+      case "expand": {
+        if (!nodeId) return;
+        const project = getActiveProject();
+        if (!project) return;
+        await project.ensureLoaded();
+        const graphData = buildGraphData(project, nodeId, 1);
+        this._postMessage({
+          type: "setGraph",
+          nodes: graphData.nodes,
+          edges: graphData.edges,
+          currentNodeId: nodeId,
+        });
+        break;
+      }
+      case "runModel":
+        await vscode.commands.executeCommand("dbtCoreTools.runModel");
+        break;
+      case "buildModel":
+        await vscode.commands.executeCommand("dbtCoreTools.buildModel");
+        break;
+      case "testModel":
+        await vscode.commands.executeCommand("dbtCoreTools.testModel");
+        break;
+      case "showModel":
+        await vscode.commands.executeCommand("dbtCoreTools.showModel");
+        break;
+      case "toggleProperties":
+        await vscode.commands.executeCommand("dbtCoreTools.toggleProperties");
+        break;
+    }
+  }
+
+  private _buildHtml(webview: vscode.Webview): string {
+    const webviewDir = vscode.Uri.joinPath(
+      this._extensionUri,
+      "src",
+      "features",
+      "lineage",
+      "webview",
+    );
+
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "styles.css"),
+    );
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "main.js"),
+    );
+    const d3Uri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "vendor", "d3.min.js"),
+    );
+    const dagreUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "vendor", "dagre.min.js"),
+    );
+    const cspSource = webview.cspSource;
+
+    const htmlPath = path.join(
+      this._extensionUri.fsPath,
+      "src",
+      "features",
+      "lineage",
+      "webview",
+      "index.html",
+    );
+
+    let html = fs.readFileSync(htmlPath, "utf8");
+    html = html
+      .replace(/\{\{styleUri\}\}/g, styleUri.toString())
+      .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
+      .replace(/\{\{d3Uri\}\}/g, d3Uri.toString())
+      .replace(/\{\{dagreUri\}\}/g, dagreUri.toString())
+      .replace(/\{\{cspSource\}\}/g, cspSource);
+
+    return html;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Graph building
+// Graph building (unchanged from original)
 // ---------------------------------------------------------------------------
 
-/**
- * Builds a subgraph centered on `centerId` walking up/downstream `depth` levels.
- */
 export function buildGraphData(
   project: DbtProject,
   centerId: string,
@@ -186,12 +290,10 @@ export function buildGraphData(
     }
   }
 
-  // Start from center
   visitedNodes.add(centerId);
   expandUpstream(centerId, depth);
   expandDownstream(centerId, depth);
 
-  // De-duplicate edges
   const edgeSet = new Set<string>();
   const uniqueEdges: GraphEdge[] = [];
   for (const edge of edges) {
@@ -202,7 +304,6 @@ export function buildGraphData(
     }
   }
 
-  // Build GraphNode list
   const graphNodes: GraphNode[] = [];
   for (const id of visitedNodes) {
     const node = nodes[id];
@@ -217,7 +318,6 @@ export function buildGraphData(
       });
       continue;
     }
-
     const source = sources[id];
     if (source) {
       graphNodes.push({
@@ -229,9 +329,6 @@ export function buildGraphData(
       });
       continue;
     }
-
-    // Unknown node type (e.g. test, exposure referenced in maps)
-    // Parse resource type from the ID prefix: "test.project.name" → "test"
     const resourceType = id.split(".")[0] ?? "unknown";
     const fallbackName = id.split(".").slice(2).join(".") || id;
     graphNodes.push({
@@ -247,84 +344,9 @@ export function buildGraphData(
 }
 
 // ---------------------------------------------------------------------------
-// Message handling
-// ---------------------------------------------------------------------------
-
-async function handleWebviewMessage(
-  message: { type: string; nodeId?: string; direction?: string },
-  context: vscode.ExtensionContext,
-): Promise<void> {
-  if (!message || !message.type) return;
-
-  const { type, nodeId } = message;
-
-  switch (type) {
-    case "openFile": {
-      if (!nodeId) return;
-      const filePath = resolveNodeFilePath(nodeId);
-      if (filePath) {
-        const doc = await vscode.workspace.openTextDocument(filePath);
-        await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-      }
-      break;
-    }
-
-    case "expand": {
-      if (!nodeId) return;
-      const project = getActiveProject();
-      if (!project) return;
-      await project.ensureLoaded();
-      const graphData = buildGraphData(project, nodeId, 1);
-      _panel?.webview.postMessage({
-        type: "setGraph",
-        nodes: graphData.nodes,
-        edges: graphData.edges,
-        currentNodeId: nodeId,
-      });
-      break;
-    }
-
-    case "runModel":
-      await vscode.commands.executeCommand("dbtCoreTools.runModel");
-      break;
-
-    case "buildModel":
-      await vscode.commands.executeCommand("dbtCoreTools.buildModel");
-      break;
-
-    case "testModel":
-      await vscode.commands.executeCommand("dbtCoreTools.testModel");
-      break;
-
-    case "showModel":
-      await vscode.commands.executeCommand("dbtCoreTools.showModel");
-      break;
-
-    case "toggleProperties":
-      await vscode.commands.executeCommand("dbtCoreTools.toggleProperties");
-      break;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Returns the unique_id for the node corresponding to the currently active editor.
- */
-function getActiveNodeId(project: DbtProject): string | null {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) return null;
-
-  const filePath = editor.document.uri.fsPath;
-  const node = project.findNodeByFilePath(filePath);
-  return node?.unique_id ?? null;
-}
-
-/**
- * Resolves a node's unique_id to an absolute file path on disk.
- */
 function resolveNodeFilePath(nodeId: string): string | null {
   const project = getActiveProject();
   if (!project) return null;
@@ -349,46 +371,4 @@ function resolveNodeFilePath(nodeId: string): string | null {
   }
 
   return null;
-}
-
-// ---------------------------------------------------------------------------
-// HTML builder
-// ---------------------------------------------------------------------------
-
-function buildWebviewHtml(
-  context: vscode.ExtensionContext,
-  webview: vscode.Webview,
-): string {
-  const webviewDir = vscode.Uri.joinPath(
-    context.extensionUri,
-    "src",
-    "features",
-    "lineage",
-    "webview",
-  );
-
-  const styleUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(webviewDir, "styles.css"),
-  );
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(webviewDir, "main.js"),
-  );
-  const cspSource = webview.cspSource;
-
-  const htmlPath = path.join(
-    context.extensionPath,
-    "src",
-    "features",
-    "lineage",
-    "webview",
-    "index.html",
-  );
-
-  let html = fs.readFileSync(htmlPath, "utf8");
-  html = html
-    .replace(/\{\{styleUri\}\}/g, styleUri.toString())
-    .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
-    .replace(/\{\{cspSource\}\}/g, cspSource);
-
-  return html;
 }
