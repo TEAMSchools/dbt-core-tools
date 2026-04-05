@@ -155,9 +155,11 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     return node?.unique_id ?? null;
   }
 
-  private async _handleMessage(
-    message: { type: string; nodeId?: string; direction?: string },
-  ): Promise<void> {
+  private async _handleMessage(message: {
+    type: string;
+    nodeId?: string;
+    direction?: string;
+  }): Promise<void> {
     if (!message || !message.type) return;
     const { type, nodeId } = message;
 

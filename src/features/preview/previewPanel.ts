@@ -144,7 +144,9 @@ export async function showModelPreview(
       modelName,
       command,
       error:
-        result.stdout || result.stderr || "dbt show returned no tabular output.",
+        result.stdout ||
+        result.stderr ||
+        "dbt show returned no tabular output.",
     });
     return;
   }

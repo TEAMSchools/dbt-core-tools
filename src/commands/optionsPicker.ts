@@ -66,7 +66,10 @@ export async function showOptionsPicker(
         description: "Choose scope and flags",
       },
     ],
-    { title: `dbt ${label}`, placeHolder: `How would you like to ${subcommand}?` },
+    {
+      title: `dbt ${label}`,
+      placeHolder: `How would you like to ${subcommand}?`,
+    },
   );
 
   if (!choice) {

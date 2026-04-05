@@ -76,8 +76,7 @@ export function getCommandOptions(projectName: string): {
     )[projectName];
     if (deferManifestPath) {
       // Resolve to absolute path so --state works regardless of terminal cwd.
-      const wsRoot =
-        vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
       deferState = path.isAbsolute(deferManifestPath)
         ? deferManifestPath
         : path.resolve(wsRoot, deferManifestPath);

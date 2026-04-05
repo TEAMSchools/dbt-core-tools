@@ -114,7 +114,10 @@ export class DbtProject {
   readonly onManifestChanged = (listener: Listener<DbtProject>) =>
     this._onManifestChanged.event(listener);
 
-  constructor(projectYmlPath: string, opts: { name: string; profileName?: string }) {
+  constructor(
+    projectYmlPath: string,
+    opts: { name: string; profileName?: string },
+  ) {
     this.projectYmlPath = projectYmlPath;
     this.rootPath = path.dirname(projectYmlPath);
     this.manifestPath = path.join(this.rootPath, "target", "manifest.json");
