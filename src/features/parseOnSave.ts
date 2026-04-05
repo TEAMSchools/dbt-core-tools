@@ -9,7 +9,7 @@
 import * as vscode from "vscode";
 import { spawn, ChildProcess } from "child_process";
 import { buildDbtCommand, splitCommand } from "../core/executor";
-import { getDiscovery } from "../extension";
+import { getDiscovery, getOutputChannel } from "../extension";
 
 // ---------------------------------------------------------------------------
 // State
@@ -18,13 +18,16 @@ import { getDiscovery } from "../extension";
 /** Map from project.name → running dbt parse child process. */
 const _runningParses = new Map<string, ChildProcess>();
 
+/** Map from modelName → running dbt compile child process. */
+const _runningCompiles = new Map<string, ChildProcess>();
+
 /**
  * Returns a promise that resolves when any in-flight parse for the given
  * project finishes. Resolves immediately if no parse is running.
  */
 export function waitForParse(projectName: string): Promise<void> {
   const child = _runningParses.get(projectName);
-  if (!child) {
+  if (!child || child.exitCode !== null) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
@@ -131,8 +134,14 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     spawnCompileIfNeeded(filePath, dbtCommand, project.rootPath, profilesDir);
   });
 
-  child.on("error", () => {
-    // Silently swallow spawn errors (e.g. dbt not on PATH).
+  child.on("error", (err) => {
+    try {
+      getOutputChannel().appendLine(
+        `[error] dbt parse spawn failed for ${project.name}: ${err}`,
+      );
+    } catch {
+      // Extension not activated; skip.
+    }
     if (_runningParses.get(project.name) === child) {
       _runningParses.delete(project.name);
     }
@@ -170,11 +179,35 @@ function spawnCompileIfNeeded(
   });
 
   const [compileExe, ...compileArgs] = splitCommand(compileCmd);
-  if (compileExe) {
-    spawn(compileExe, compileArgs, {
-      cwd: projectRoot,
-      stdio: "ignore",
-      detached: false,
-    });
+  if (!compileExe) {
+    return;
   }
+
+  // Cancel any in-flight compile for this model.
+  const existing = _runningCompiles.get(modelName);
+  if (existing && !existing.killed) {
+    try {
+      existing.kill("SIGINT");
+    } catch {
+      // Process may have already exited; ignore.
+    }
+  }
+
+  const compileChild = spawn(compileExe, compileArgs, {
+    cwd: projectRoot,
+    stdio: "ignore",
+    detached: false,
+  });
+  _runningCompiles.set(modelName, compileChild);
+
+  compileChild.on("close", () => {
+    if (_runningCompiles.get(modelName) === compileChild) {
+      _runningCompiles.delete(modelName);
+    }
+  });
+  compileChild.on("error", () => {
+    if (_runningCompiles.get(modelName) === compileChild) {
+      _runningCompiles.delete(modelName);
+    }
+  });
 }

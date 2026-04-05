@@ -19,6 +19,8 @@ import { getModelName, getCommandOptions } from "../../commands/modelCommands";
 /** Re-use an existing panel if the model name matches; otherwise replace it. */
 let _panel: vscode.WebviewPanel | undefined;
 let _panelModelName: string | undefined;
+let _panelReady = false;
+let _pendingMessage: unknown | null = null;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -93,10 +95,22 @@ export async function showModelPreview(
     _panel.onDidDispose(() => {
       _panel = undefined;
       _panelModelName = undefined;
+      _panelReady = false;
+      _pendingMessage = null;
     });
 
-    // Handle messages from the webview (e.g. copy to clipboard)
+    // Handle messages from the webview (ready handshake + copy)
+    _panelReady = false;
+    _pendingMessage = null;
     _panel.webview.onDidReceiveMessage(async (message) => {
+      if (message?.type === "ready") {
+        _panelReady = true;
+        if (_pendingMessage) {
+          _panel?.webview.postMessage(_pendingMessage);
+          _pendingMessage = null;
+        }
+        return;
+      }
       if (message?.type === "copy" && typeof message.text === "string") {
         await vscode.env.clipboard.writeText(message.text);
         vscode.window.showInformationMessage(
@@ -120,7 +134,7 @@ export async function showModelPreview(
     } catch {
       // Extension not activated; skip.
     }
-    _panel.webview.postMessage({
+    postToPanel({
       type: "error",
       modelName,
       command,
@@ -136,7 +150,7 @@ export async function showModelPreview(
   const { columns, rows } = parseDbtShowOutput(result.stdout);
 
   if (columns.length === 0) {
-    _panel.webview.postMessage({
+    postToPanel({
       type: "error",
       modelName,
       command,
@@ -148,7 +162,16 @@ export async function showModelPreview(
     return;
   }
 
-  _panel.webview.postMessage({ type: "results", columns, rows, modelName });
+  postToPanel({ type: "results", columns, rows, modelName });
+}
+
+function postToPanel(message: unknown): void {
+  if (!_panel) return;
+  if (!_panelReady) {
+    _pendingMessage = message;
+    return;
+  }
+  _panel.webview.postMessage(message);
 }
 
 // ---------------------------------------------------------------------------

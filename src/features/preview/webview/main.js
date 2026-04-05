@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck — webview script runs in browser context, not TS-checked
 (function () {
   const vscode = acquireVsCodeApi();
   const header = document.getElementById("header");
@@ -126,6 +126,9 @@
       vscode.postMessage({ type: "copy", text: errorText });
     });
   }
+
+  // Signal to the extension that the webview is ready to receive messages.
+  vscode.postMessage({ type: "ready" });
 
   // Listen for messages from the extension host
   window.addEventListener("message", (event) => {

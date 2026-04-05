@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { getActiveProject, getDiscovery } from "../extension";
+import { getActiveProject, getDiscovery, getOutputChannel } from "../extension";
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
 import { getCommandOptions } from "../commands/modelCommands";
 import { waitForParse } from "./parseOnSave";
@@ -141,7 +141,12 @@ export async function showCompiledSql(
       },
       async () => {
         await waitForParse(project.name);
-        await executeAndCapture(compileCmd, project.rootPath);
+        const result = await executeAndCapture(compileCmd, project.rootPath);
+        if (result.exitCode !== 0) {
+          getOutputChannel().appendLine(
+            `[error] dbt compile failed for ${modelName}: ${result.stderr || result.stdout}`,
+          );
+        }
         await project.reloadManifest();
       },
     );

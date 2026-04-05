@@ -95,6 +95,17 @@ export async function activate(
   // Discover projects in the workspace.
   await _discovery.discover();
 
+  // Register lineage view provider (declared early so the editor-change
+  // handler below can reference it without a temporal dead zone risk).
+  const lineageProvider = new LineageViewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      LineageViewProvider.viewType,
+      lineageProvider,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
   // Set initial context keys and lazy-load for whatever is open on startup.
   await updateContextKeys(vscode.window.activeTextEditor);
 
@@ -149,16 +160,6 @@ export async function activate(
   context.subscriptions.push(
     vscode.commands.registerCommand("dbtCoreTools.stageExternalSources", () =>
       stageExternalSources(),
-    ),
-  );
-
-  // Register lineage view provider.
-  const lineageProvider = new LineageViewProvider(context.extensionUri);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      LineageViewProvider.viewType,
-      lineageProvider,
-      { webviewOptions: { retainContextWhenHidden: true } },
     ),
   );
 

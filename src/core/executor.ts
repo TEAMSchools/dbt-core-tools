@@ -119,7 +119,9 @@ const TASK_NAME_PREFIX = "dbt: ";
  * Registers the `onDidEndTaskProcess` listener that drains command queues.
  * Must be called once during `activate()`.
  */
-export function initExecutor(context: { subscriptions: { dispose(): void }[] }): void {
+export function initExecutor(context: {
+  subscriptions: { dispose(): void }[];
+}): void {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const vscode = require("vscode") as VsCode;
 

@@ -66,6 +66,8 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` and `previewPanel.ts` statically import from `../extension`)
 - Command execution uses VS Code Task API (`ShellExecution` + `onDidEndTaskProcess`) for reliable completion detection — `initExecutor(context)` must be called in `activate()`
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
+- Lineage webview has two message types: `setGraph` (bypasses lock toggle, used for explicit user actions like expand) and `updateCenter` (respects lock toggle, used for editor-change and manifest-reload updates)
+- Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
 - Webview assets (HTML/JS/CSS in `src/features/*/webview/`) are NOT bundled by esbuild — they're served at runtime via `webview.asWebviewUri()` and must be included in the VSIX

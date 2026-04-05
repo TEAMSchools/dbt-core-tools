@@ -104,7 +104,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const project = getActiveProject();
     if (!project) {
       this._postMessage({
-        type: "setGraph",
+        type: "updateCenter",
         nodes: [],
         edges: [],
         currentNodeId: null,
@@ -118,7 +118,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const nodeId = this._getActiveNodeId(project);
     if (!nodeId) {
       this._postMessage({
-        type: "setGraph",
+        type: "updateCenter",
         nodes: [],
         edges: [],
         currentNodeId: null,
@@ -129,7 +129,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
 
     const graphData = buildGraphData(project, nodeId, 1);
     this._postMessage({
-      type: "setGraph",
+      type: "updateCenter",
       nodes: graphData.nodes,
       edges: graphData.edges,
       currentNodeId: nodeId,

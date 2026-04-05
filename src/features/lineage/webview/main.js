@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck — webview script runs in browser context, not TS-checked
 /* global d3, dagre */
 (function () {
   const vscode = acquireVsCodeApi();
