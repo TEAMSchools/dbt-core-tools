@@ -317,7 +317,7 @@ async function setContextKeys(
 // ---------------------------------------------------------------------------
 
 const DBT_YML_SCHEMA_URL =
-  "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/dbt_yml_files.json";
+  "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/dbt_yml_files-latest.json";
 
 const EXCLUDED_YML_FILENAMES = new Set([
   "dbt_project.yml",

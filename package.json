@@ -284,15 +284,15 @@
     "yamlValidation": [
       {
         "fileMatch": "**/dbt_project.yml",
-        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/dbt_project.json"
+        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/dbt_project-latest.json"
       },
       {
         "fileMatch": "**/selectors.yml",
-        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/selectors.json"
+        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/selectors-latest.json"
       },
       {
         "fileMatch": "**/packages.yml",
-        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/refs/tags/v1.11.0-a1/schemas/packages.json"
+        "url": "https://raw.githubusercontent.com/dbt-labs/dbt-jsonschema/main/schemas/latest/packages-latest.json"
       }
     ]
   },
