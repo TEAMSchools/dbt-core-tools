@@ -223,6 +223,26 @@ export class DbtProject {
     return null;
   }
 
+  /**
+   * Returns the first source whose `original_file_path` resolves to `filePath`.
+   * Multiple sources may share the same file; returns the first match.
+   */
+  findSourceByFilePath(filePath: string): ManifestSource | null {
+    const sources = this.getSources();
+    for (const source of Object.values(sources)) {
+      const abs = path.isAbsolute(source.original_file_path)
+        ? source.original_file_path
+        : safeJoinPath(this.rootPath, source.original_file_path);
+      if (!abs) {
+        continue;
+      }
+      if (abs === filePath || source.original_file_path === filePath) {
+        return source;
+      }
+    }
+    return null;
+  }
+
   /** Returns true when `filePath` lives inside this project's root directory. */
   containsFile(filePath: string): boolean {
     const rel = path.relative(this.rootPath, filePath);

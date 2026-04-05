@@ -152,7 +152,9 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     if (!editor) return null;
     const filePath = editor.document.uri.fsPath;
     const node = project.findNodeByFilePath(filePath);
-    return node?.unique_id ?? null;
+    if (node) return node.unique_id;
+    const source = project.findSourceByFilePath(filePath);
+    return source?.unique_id ?? null;
   }
 
   private async _handleMessage(message: {
