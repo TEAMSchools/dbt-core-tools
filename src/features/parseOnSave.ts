@@ -112,4 +112,34 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
       _runningParses.delete(project.name);
     }
   });
+
+  // If a compiled SQL document is open for this model, also compile it.
+  const fileName = filePath.split(/[\\/]/).pop() ?? "";
+  const modelName = fileName.replace(/\.sql$/i, "");
+  if (modelName) {
+    const hasOpenCompiledDoc = vscode.workspace.textDocuments.some(
+      (doc) =>
+        doc.uri.scheme === "dbt-compiled" &&
+        new URLSearchParams(doc.uri.query).get("model") === modelName,
+    );
+
+    if (hasOpenCompiledDoc) {
+      const compileCmd = buildDbtCommand({
+        dbtCommand,
+        subcommand: "compile",
+        projectDir: project.rootPath,
+        selector: modelName,
+        profilesDir: profilesDir || undefined,
+      });
+
+      const [compileExe, ...compileArgs] = splitCommand(compileCmd);
+      if (compileExe) {
+        spawn(compileExe, compileArgs, {
+          cwd: project.rootPath,
+          stdio: "ignore",
+          detached: false,
+        });
+      }
+    }
+  }
 }
