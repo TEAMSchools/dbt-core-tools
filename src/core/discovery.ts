@@ -9,7 +9,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { DbtProject, extractProjectName } from "./project";
+import { DbtProject, extractProjectName, extractProfileName } from "./project";
 
 export class ProjectDiscovery {
   projects: DbtProject[] = [];
@@ -61,8 +61,13 @@ export class ProjectDiscovery {
 
     const projects: DbtProject[] = [];
     for (const ymlPath of filtered) {
-      const name = await readProjectName(ymlPath);
-      projects.push(new DbtProject(ymlPath, { name }));
+      const info = await readProjectInfo(ymlPath);
+      projects.push(
+        new DbtProject(ymlPath, {
+          name: info.name,
+          profileName: info.profileName ?? undefined,
+        }),
+      );
     }
 
     this.projects = projects;
@@ -114,11 +119,17 @@ export function findProjectForFile(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-async function readProjectName(ymlPath: string): Promise<string> {
+async function readProjectInfo(
+  ymlPath: string,
+): Promise<{ name: string; profileName: string | null }> {
   try {
     const content = await fs.promises.readFile(ymlPath, "utf8");
-    return extractProjectName(content) ?? path.basename(path.dirname(ymlPath));
+    const name =
+      extractProjectName(content) ?? path.basename(path.dirname(ymlPath));
+    const profileName = extractProfileName(content);
+    return { name, profileName };
   } catch {
-    return path.basename(path.dirname(ymlPath));
+    const name = path.basename(path.dirname(ymlPath));
+    return { name, profileName: null };
   }
 }

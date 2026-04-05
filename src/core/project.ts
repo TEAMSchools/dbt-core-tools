@@ -103,6 +103,7 @@ export class DbtProject {
   readonly rootPath: string;
   readonly manifestPath: string;
   readonly name: string;
+  readonly profileName: string;
 
   private manifest: ManifestData | null = null;
   private _loadPromise: Promise<void> | null = null;
@@ -113,11 +114,12 @@ export class DbtProject {
   readonly onManifestChanged = (listener: Listener<DbtProject>) =>
     this._onManifestChanged.event(listener);
 
-  constructor(projectYmlPath: string, opts: { name: string }) {
+  constructor(projectYmlPath: string, opts: { name: string; profileName?: string }) {
     this.projectYmlPath = projectYmlPath;
     this.rootPath = path.dirname(projectYmlPath);
     this.manifestPath = path.join(this.rootPath, "target", "manifest.json");
     this.name = opts.name;
+    this.profileName = opts.profileName ?? opts.name;
   }
 
   /**
@@ -266,5 +268,14 @@ export class DbtProject {
  */
 export function extractProjectName(ymlContent: string): string | null {
   const match = /^name:\s*['"]?([^\s'"]+)/m.exec(ymlContent);
+  return match ? match[1] : null;
+}
+
+/**
+ * Extracts the `profile:` value from raw dbt_project.yml content.
+ * Returns null if the profile field is not found.
+ */
+export function extractProfileName(ymlContent: string): string | null {
+  const match = /^profile:\s*['"]?([^\s'"]+)/m.exec(ymlContent);
   return match ? match[1] : null;
 }

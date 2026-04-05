@@ -55,12 +55,12 @@ export class TargetSelector {
 
     const { targets, defaultTarget } = parseProfileTargets(
       profilesPath,
-      project.name,
+      project.profileName,
     );
 
     if (targets.length === 0) {
       vscode.window.showWarningMessage(
-        `dbt Core Tools: No targets found for profile "${project.name}" in ${profilesPath}.`,
+        `dbt Core Tools: No targets found for profile "${project.profileName}" in ${profilesPath}.`,
       );
       return;
     }
