@@ -8,6 +8,8 @@ A VS Code extension wrapping dbt Core CLI. No LSP, no framework — six features
 
 Design spec: `docs/specs/2026-04-02-dbt-core-tools-vscode-extension-design.md`
 Implementation plan: `docs/plans/2026-04-03-dbt-core-tools-vscode-extension.md`
+v0.0.3 feedback spec: `docs/specs/2026-04-05-v0.0.3-feedback-design.md`
+v0.0.3 feedback plan: `docs/plans/2026-04-05-v0.0.3-feedback.md`
 
 ## Build & Test Commands
 
@@ -55,11 +57,20 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - TypeScript strict mode enabled
 - Zero runtime dependencies — everything bundled via esbuild
 - `vscode` module is external (provided by VS Code runtime)
-- Webview panels use plain HTML/JS (no React/Svelte) with D3.js + dagre for lineage
+- Webview views use plain HTML/JS (no React/Svelte) with D3.js + dagre (vendored locally, no CDN — extension runs in Codespaces)
 - Extension depends on `redhat.vscode-yaml` for YAML schema validation
+- Extension depends on `samuelcolvin.jinjahtml` for Jinja-SQL syntax highlighting
 - Settings are namespaced under `dbtCoreTools.*`
 - Linting/formatting via Trunk (prettier, markdownlint, osv-scanner, trufflehog)
 - `vscode` is lazy-loaded via `require('vscode')` inside functions (not top-level imports) in core modules — this allows unit tests to run without the VS Code runtime
+- If a module already has a top-level `import * as vscode`, don't use lazy require for other imports from the same module (e.g. `modelCommands.ts` statically imports from `../extension`)
+- Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
 - Webview assets (HTML/JS/CSS in `src/features/*/webview/`) are NOT bundled by esbuild — they're served at runtime via `webview.asWebviewUri()` and must be included in the VSIX
+
+## dbt-Specific Gotchas
+
+- `dbt parse` does NOT populate `compiled_code` in manifest — use `dbt compile` for that
+- `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
+- Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
