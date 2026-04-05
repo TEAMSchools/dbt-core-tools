@@ -27,6 +27,20 @@ export function setExtensionContext(ctx: vscode.ExtensionContext): void {
 // ---------------------------------------------------------------------------
 
 /**
+ * Resolves a potentially relative path against the workspace root.
+ * Returns undefined if the input is falsy.
+ */
+export function resolveWorkspacePath(
+  inputPath: string | undefined,
+  wsRoot: string,
+): string | undefined {
+  if (!inputPath) {
+    return undefined;
+  }
+  return path.isAbsolute(inputPath) ? inputPath : path.resolve(wsRoot, inputPath);
+}
+
+/**
  * Extracts the model name from the active SQL editor's filename (sans extension).
  * Shows a warning and returns null if no SQL file is active.
  */
@@ -63,7 +77,9 @@ export function getCommandOptions(projectName: string): {
 } {
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
-  const profilesDir = config.get<string>("profilesDir", "") || undefined;
+  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const rawProfilesDir = config.get<string>("profilesDir", "") || undefined;
+  const profilesDir = resolveWorkspacePath(rawProfilesDir, wsRoot);
   const target = config.get<Record<string, string>>("target", {})[projectName];
 
   // Only include deferState when the toggle is actually on.
@@ -75,11 +91,7 @@ export function getCommandOptions(projectName: string): {
       {},
     )[projectName];
     if (deferManifestPath) {
-      // Resolve to absolute path so --state works regardless of terminal cwd.
-      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-      deferState = path.isAbsolute(deferManifestPath)
-        ? deferManifestPath
-        : path.resolve(wsRoot, deferManifestPath);
+      deferState = resolveWorkspacePath(deferManifestPath, wsRoot);
     }
   }
 
