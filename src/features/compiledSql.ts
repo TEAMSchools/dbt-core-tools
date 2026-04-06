@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { getActiveProject, getDiscovery, getOutputChannel } from "../extension";
+import { getActiveProject, getDiscovery, getManifestStatus, getOutputChannel } from "../extension";
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
 import { getCommandOptions } from "../commands/modelCommands";
 import { waitForParse } from "./parseOnSave";
@@ -133,6 +133,9 @@ export async function showCompiledSql(
       profilesDir,
     });
 
+    const manifestStatus = getManifestStatus();
+    manifestStatus?.setRunning(`compiling ${modelName}`);
+
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -151,6 +154,7 @@ export async function showCompiledSql(
       },
     );
 
+    await manifestStatus?.clearRunning(project);
     provider.fireChange(uri);
   }
 }
