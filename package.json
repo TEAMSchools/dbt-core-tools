@@ -170,18 +170,13 @@
           "when": "dbtCoreTools.isDbtSqlFileWithSources"
         },
         {
-          "command": "dbtCoreTools.showLineage",
+          "command": "dbtCoreTools.showCompiledSql",
           "group": "navigation@6",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "command": "dbtCoreTools.showCompiledSql",
-          "group": "navigation@7",
-          "when": "dbtCoreTools.isDbtSqlFile"
-        },
-        {
           "command": "dbtCoreTools.toggleProperties",
-          "group": "navigation@8",
+          "group": "navigation@7",
           "when": "dbtCoreTools.isDbtFile"
         }
       ],
