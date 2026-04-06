@@ -298,15 +298,19 @@
     "publish": "npx @vscode/vsce publish"
   },
   "devDependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
-    "d3": "^7.9.0",
-    "elkjs": "^0.11.1",
+    "@xyflow/react": "^12.10.2",
     "esbuild": "^0.28.0",
     "mocha": "^11.7.5",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
   }
