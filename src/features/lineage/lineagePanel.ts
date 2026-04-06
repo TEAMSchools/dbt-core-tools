@@ -2,7 +2,7 @@
  * Lineage Viewer — persistent bottom panel using WebviewViewProvider.
  *
  * Renders a DAG of upstream/downstream dependencies for the active model
- * using D3.js and dagre in a webview view (Panel area).
+ * using D3.js and ELK in a webview view (Panel area).
  */
 
 import * as vscode from "vscode";
@@ -252,7 +252,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Graph building (unchanged from original)
+// Graph building
 // ---------------------------------------------------------------------------
 
 export function buildGraphData(

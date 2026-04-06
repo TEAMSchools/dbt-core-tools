@@ -76,8 +76,10 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - `.vscodeignore` excludes `src/**` but un-excludes `!src/features/*/webview/**` — any new webview directories need the same exception
 - Tests for modules that statically import `vscode` need a stub: use `Module._resolveFilename` to redirect `vscode` to a minimal shim before importing the module under test (see `test/unit/modelCommands.test.ts` for the pattern)
 - `resolveWorkspacePath(path, wsRoot)` in `modelCommands.ts` resolves relative config paths to absolute — use it instead of inline `path.isAbsolute`/`path.resolve` when reading `profilesDir` or similar settings
-- Both lineage and preview panels are `WebviewViewProvider`s in the bottom Panel area — preview provider is wired via `setPreviewProvider()` from `extension.ts`. All `WebviewViewProvider`s must register `onDidDispose` to reset `_view`, `_ready`, and `_pendingMessage`.
+- Both lineage and preview panels are `WebviewViewProvider`s in the bottom Panel area — preview provider is wired via `setPreviewProvider()` from `extension.ts`. All `WebviewViewProvider`s must register `onDidDispose` to reset `_view`, `_ready`, and pending message state.
 - Preview panel uses a generation counter (`_generation`) to discard stale `dbt show` results when the user triggers multiple previews before the first completes
+- Completion trigger characters in `extension.ts` (`registerCompletionItemProvider`) must match every prefix pattern in `completion.ts` — adding a pattern like `/\{%-?\s*$/` without registering `"%"` as a trigger character makes it unreachable except via manual Ctrl+Space
+- Preview panel buffers messages as a queue (`_pendingMessages[]`) because `showPreview()` posts loading then results before the webview may be ready; lineage panel uses a single slot (`_pendingMessage`) since it only ever has one pending state
 
 ## dbt-Specific Gotchas
 

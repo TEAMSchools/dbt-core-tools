@@ -22,7 +22,7 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
 
   private _view: vscode.WebviewView | undefined;
   private _ready = false;
-  private _pendingMessage: unknown | null = null;
+  private _pendingMessages: unknown[] = [];
   private _generation = 0;
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
@@ -53,16 +53,16 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message?.type === "ready") {
         this._ready = true;
-        if (this._pendingMessage) {
-          webviewView.webview.postMessage(this._pendingMessage);
-          this._pendingMessage = null;
+        for (const msg of this._pendingMessages) {
+          webviewView.webview.postMessage(msg);
         }
+        this._pendingMessages = [];
         return;
       }
       if (message?.type === "copy" && typeof message.text === "string") {
         await vscode.env.clipboard.writeText(message.text);
         vscode.window.showInformationMessage(
-          "dbt Core Tools: Error copied to clipboard.",
+          "dbt Core Tools: Copied to clipboard.",
         );
       }
     });
@@ -70,7 +70,7 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
     webviewView.onDidDispose(() => {
       this._view = undefined;
       this._ready = false;
-      this._pendingMessage = null;
+      this._pendingMessages = [];
     });
   }
 
@@ -178,7 +178,7 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
   private _postMessage(message: unknown): void {
     if (!this._view) return;
     if (!this._ready) {
-      this._pendingMessage = message;
+      this._pendingMessages.push(message);
       return;
     }
     this._view.webview.postMessage(message);

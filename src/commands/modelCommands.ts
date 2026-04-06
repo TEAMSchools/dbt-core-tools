@@ -16,6 +16,7 @@ import { buildSelector, showOptionsPicker } from "./optionsPicker";
 
 let _previewProvider: { showPreview(): Promise<void> } | undefined;
 
+/** Called from extension.ts activate() to wire the preview panel. */
 export function setPreviewProvider(provider: { showPreview(): Promise<void> }): void {
   _previewProvider = provider;
 }

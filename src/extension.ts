@@ -251,6 +251,7 @@ export async function activate(
       new DbtCompletionProvider(),
       "(",
       "{",
+      "%",
     ),
   );
 
