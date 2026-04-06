@@ -2,7 +2,7 @@
   "name": "dbt-core-tools",
   "displayName": "dbt Core Tools",
   "description": "A thin wrapper around dbt Core CLI for VS Code",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "TEAMSchools",
   "license": "MIT",
   "repository": {
