@@ -316,7 +316,10 @@
           `translate(${elkNode.x + NODE_WIDTH + 12}, ${elkNode.y + NODE_HEIGHT / 2})`,
         );
 
-      downstreamHandle.append("circle").attr("r", 10).attr("class", "expand-circle");
+      downstreamHandle
+        .append("circle")
+        .attr("r", 10)
+        .attr("class", "expand-circle");
       downstreamHandle
         .append("text")
         .attr("text-anchor", "middle")
@@ -344,7 +347,10 @@
           `translate(${elkNode.x - 12}, ${elkNode.y + NODE_HEIGHT / 2})`,
         );
 
-      upstreamHandle.append("circle").attr("r", 10).attr("class", "expand-circle");
+      upstreamHandle
+        .append("circle")
+        .attr("r", 10)
+        .attr("class", "expand-circle");
       upstreamHandle
         .append("text")
         .attr("text-anchor", "middle")
@@ -396,7 +402,10 @@
 
       case "mergeGraph": {
         if (!_graphData) {
-          _graphData = { nodes: message.nodes ?? [], edges: message.edges ?? [] };
+          _graphData = {
+            nodes: message.nodes ?? [],
+            edges: message.edges ?? [],
+          };
         } else {
           const existingIds = new Set(_graphData.nodes.map((n) => n.id));
           for (const node of message.nodes ?? []) {

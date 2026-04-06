@@ -57,10 +57,7 @@ describe("resolveWorkspacePath", () => {
   });
 
   it("resolves nested relative paths", () => {
-    const result = resolveWorkspacePath(
-      "config/.dbt",
-      "/workspaces/teamster",
-    );
+    const result = resolveWorkspacePath("config/.dbt", "/workspaces/teamster");
     assert.strictEqual(result, "/workspaces/teamster/config/.dbt");
   });
 });

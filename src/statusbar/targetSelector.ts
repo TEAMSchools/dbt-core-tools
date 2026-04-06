@@ -52,7 +52,9 @@ export class TargetSelector {
     const config = vscode.workspace.getConfiguration("dbtCoreTools");
     const rawProfilesDir = config.get<string>("profilesDir", "") || undefined;
     const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-    const profilesDir = resolveWorkspacePath(rawProfilesDir, wsRoot) ?? path.join(os.homedir(), ".dbt");
+    const profilesDir =
+      resolveWorkspacePath(rawProfilesDir, wsRoot) ??
+      path.join(os.homedir(), ".dbt");
     const profilesPath = path.join(profilesDir, "profiles.yml");
 
     const { targets, defaultTarget } = parseProfileTargets(

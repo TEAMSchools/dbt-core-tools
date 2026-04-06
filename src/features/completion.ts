@@ -137,7 +137,17 @@ export class DbtCompletionProvider implements vscode.CompletionItemProvider {
 
     // {% or {%- — return Jinja tag keywords
     if (/\{%-?\s*$/.test(textBeforeCursor)) {
-      const tagKeywords = ["if", "for", "set", "macro", "block", "filter", "call", "raw", "do"];
+      const tagKeywords = [
+        "if",
+        "for",
+        "set",
+        "macro",
+        "block",
+        "filter",
+        "call",
+        "raw",
+        "do",
+      ];
       return tagKeywords.map((kw) => {
         const item = new vscode.CompletionItem(
           kw,

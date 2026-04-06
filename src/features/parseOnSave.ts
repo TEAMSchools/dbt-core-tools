@@ -102,7 +102,8 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
   const rawProfilesDir = config.get<string>("profilesDir", "");
   const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-  const profilesDir = resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
+  const profilesDir =
+    resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
 
   const cmd = buildDbtCommand({
     dbtCommand,

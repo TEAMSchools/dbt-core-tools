@@ -17,7 +17,9 @@ import { buildSelector, showOptionsPicker } from "./optionsPicker";
 let _previewProvider: { showPreview(): Promise<void> } | undefined;
 
 /** Called from extension.ts activate() to wire the preview panel. */
-export function setPreviewProvider(provider: { showPreview(): Promise<void> }): void {
+export function setPreviewProvider(provider: {
+  showPreview(): Promise<void>;
+}): void {
   _previewProvider = provider;
 }
 
@@ -36,7 +38,9 @@ export function resolveWorkspacePath(
   if (!inputPath) {
     return undefined;
   }
-  return path.isAbsolute(inputPath) ? inputPath : path.resolve(wsRoot, inputPath);
+  return path.isAbsolute(inputPath)
+    ? inputPath
+    : path.resolve(wsRoot, inputPath);
 }
 
 /**
