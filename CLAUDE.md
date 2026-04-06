@@ -68,7 +68,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` statically imports from `../extension`)
 - Command execution uses VS Code Task API (`ShellExecution` + `onDidEndTaskProcess`) for reliable completion detection — `initExecutor(context)` must be called in `activate()`
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
-- Lineage webview has three message types: `setGraph` (bypasses lock toggle, used for explicit user actions), `updateCenter` (respects lock toggle, used for editor-change and manifest-reload updates), and `mergeGraph` (adds nodes/edges without changing selection, used for expand)
+- Lineage webview has two active message types: `updateCenter` (respects lock toggle, used for editor-change and manifest-reload updates) and `mergeGraph` (adds nodes/edges without changing selection, used for expand). The webview also handles a legacy `setGraph` type (bypasses lock toggle) but the backend no longer sends it.
 - Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
@@ -76,7 +76,8 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - `.vscodeignore` excludes `src/**` but un-excludes `!src/features/*/webview/**` — any new webview directories need the same exception
 - Tests for modules that statically import `vscode` need a stub: use `Module._resolveFilename` to redirect `vscode` to a minimal shim before importing the module under test (see `test/unit/modelCommands.test.ts` for the pattern)
 - `resolveWorkspacePath(path, wsRoot)` in `modelCommands.ts` resolves relative config paths to absolute — use it instead of inline `path.isAbsolute`/`path.resolve` when reading `profilesDir` or similar settings
-- Both lineage and preview panels are `WebviewViewProvider`s in the bottom Panel area — preview provider is wired via `setPreviewProvider()` from `extension.ts`
+- Both lineage and preview panels are `WebviewViewProvider`s in the bottom Panel area — preview provider is wired via `setPreviewProvider()` from `extension.ts`. All `WebviewViewProvider`s must register `onDidDispose` to reset `_view`, `_ready`, and `_pendingMessage`.
+- Preview panel uses a generation counter (`_generation`) to discard stale `dbt show` results when the user triggers multiple previews before the first completes
 
 ## dbt-Specific Gotchas
 

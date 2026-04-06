@@ -23,6 +23,7 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
   private _view: vscode.WebviewView | undefined;
   private _ready = false;
   private _pendingMessage: unknown | null = null;
+  private _generation = 0;
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -65,6 +66,12 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
         );
       }
     });
+
+    webviewView.onDidDispose(() => {
+      this._view = undefined;
+      this._ready = false;
+      this._pendingMessage = null;
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -94,6 +101,9 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
       this._view.show(true);
     }
 
+    // Bump generation so stale responses from earlier calls are discarded.
+    const gen = ++this._generation;
+
     // --- post loading message ---
     this._postMessage({ type: "loading", modelName });
 
@@ -118,6 +128,9 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
 
     // --- run dbt show ---
     const result = await executeAndCapture(command, project.rootPath);
+
+    // A newer showPreview() call has started — discard this stale result.
+    if (gen !== this._generation) return;
 
     if (result.exitCode !== 0) {
       try {

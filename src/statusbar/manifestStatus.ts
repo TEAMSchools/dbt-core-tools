@@ -50,13 +50,14 @@ export class ManifestStatus {
       return;
     }
 
-    this._lastProject = project;
-
     if (!project) {
+      this._lastProject = null;
       this._item.hide();
       this._stopRefresh();
       return;
     }
+
+    this._lastProject = project;
 
     const mtime = await project.getManifestMtime();
     if (!mtime) {
