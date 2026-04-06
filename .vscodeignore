@@ -4,6 +4,7 @@ test/**
 .vscode/**
 node_modules/**
 .trunk/**
+.worktrees/**
 .devcontainer/**
 .gitignore
 tsconfig.json
