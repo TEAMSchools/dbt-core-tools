@@ -6,7 +6,11 @@
  */
 
 import * as vscode from "vscode";
-import { buildDbtCommand, executeInTerminal } from "../core/executor";
+import {
+  buildDbtCommand,
+  executeInTerminal,
+  resolveDbtExecutable,
+} from "../core/executor";
 import { getActiveProject, getDiscovery } from "../extension";
 
 // ---------------------------------------------------------------------------
@@ -15,7 +19,9 @@ import { getActiveProject, getDiscovery } from "../extension";
 
 function getSettings(): { dbtCommand: string; profilesDir: string } {
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
-  const dbtCommand = config.get<string>("dbtCommand", "dbt");
+  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
+  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
   const profilesDir = config.get<string>("profilesDir", "");
   return { dbtCommand, profilesDir };
 }

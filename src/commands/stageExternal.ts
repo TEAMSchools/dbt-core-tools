@@ -7,7 +7,11 @@
  */
 
 import * as vscode from "vscode";
-import { buildDbtCommand, executeInTerminal } from "../core/executor";
+import {
+  buildDbtCommand,
+  executeInTerminal,
+  resolveDbtExecutable,
+} from "../core/executor";
 import { getActiveProject } from "../extension";
 import { extractSourceCalls } from "../utils/patterns";
 
@@ -30,7 +34,9 @@ export async function stageExternalSources(): Promise<void> {
   }
 
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
-  const dbtCommand = config.get<string>("dbtCommand", "dbt");
+  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
+  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
   const profilesDir = config.get<string>("profilesDir", "") || undefined;
   const varsConfig = config.get<Record<string, string>>(
     "stageExternalSourcesVars",

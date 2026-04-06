@@ -8,7 +8,11 @@
 
 import * as vscode from "vscode";
 import { spawn, ChildProcess } from "child_process";
-import { buildDbtCommand, splitCommand } from "../core/executor";
+import {
+  buildDbtCommand,
+  splitCommand,
+  resolveDbtExecutable,
+} from "../core/executor";
 import { getDiscovery, getOutputChannel } from "../extension";
 import { resolveWorkspacePath } from "../commands/modelCommands";
 
@@ -99,9 +103,10 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
   }
 
   // Build the parse command.
-  const dbtCommand = config.get<string>("dbtCommand", "dbt");
+  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
   const rawProfilesDir = config.get<string>("profilesDir", "");
   const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
   const profilesDir =
     resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
 
