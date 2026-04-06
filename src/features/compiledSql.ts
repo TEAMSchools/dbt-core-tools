@@ -6,7 +6,12 @@
  */
 
 import * as vscode from "vscode";
-import { getActiveProject, getDiscovery, getManifestStatus, getOutputChannel } from "../extension";
+import {
+  getActiveProject,
+  getDiscovery,
+  getManifestStatus,
+  getOutputChannel,
+} from "../extension";
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
 import { getCommandOptions } from "../commands/modelCommands";
 import { waitForParse } from "./parseOnSave";

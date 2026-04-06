@@ -29,7 +29,9 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
       if (!vscode) return;
 
       const isExpanded =
-        direction === "upstream" ? data.expandedUpstream : data.expandedDownstream;
+        direction === "upstream"
+          ? data.expandedUpstream
+          : data.expandedDownstream;
 
       vscode.postMessage({
         type: isExpanded ? "collapse" : "expand",
@@ -71,7 +73,9 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
       className={`dbt-node${data.isCurrent ? " current" : ""}${data.contractEnforced ? " contracted" : ""}`}
       style={{
         background: fill,
-        borderColor: data.isCurrent ? "var(--vscode-focusBorder, #007acc)" : color,
+        borderColor: data.isCurrent
+          ? "var(--vscode-focusBorder, #007acc)"
+          : color,
         borderWidth: data.isCurrent ? "2.5px" : "1.5px",
         borderStyle: data.contractEnforced ? "dashed" : "solid",
         borderRadius: 4,
@@ -82,14 +86,24 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
-      <Handle type="target" position={Position.Left} style={{ visibility: "hidden" }} />
-      <Handle type="source" position={Position.Right} style={{ visibility: "hidden" }} />
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ visibility: "hidden" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ visibility: "hidden" }}
+      />
 
       {data.hasUpstream && (
         <button
           className="expand-btn expand-btn-left"
           onClick={(e) => onExpand(e, "upstream")}
-          title={data.expandedUpstream ? "Collapse upstream" : "Expand upstream"}
+          title={
+            data.expandedUpstream ? "Collapse upstream" : "Expand upstream"
+          }
         >
           {data.expandedUpstream ? "\u2212" : "+"}
         </button>
@@ -99,7 +113,11 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
         <button
           className="expand-btn expand-btn-right"
           onClick={(e) => onExpand(e, "downstream")}
-          title={data.expandedDownstream ? "Collapse downstream" : "Expand downstream"}
+          title={
+            data.expandedDownstream
+              ? "Collapse downstream"
+              : "Expand downstream"
+          }
         >
           {data.expandedDownstream ? "\u2212" : "+"}
         </button>
@@ -111,7 +129,9 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
       )}
 
       {data.contractEnforced && (
-        <span className="node-badge" title="Contract enforced">{"\uD83D\uDEE1"}</span>
+        <span className="node-badge" title="Contract enforced">
+          {"\uD83D\uDEE1"}
+        </span>
       )}
       {data.testCount > 0 && (
         <span className="test-badge" title={`${data.testCount} tests`}>
