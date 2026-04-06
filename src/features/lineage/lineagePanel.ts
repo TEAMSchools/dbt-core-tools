@@ -309,6 +309,23 @@ export function buildGraphData(
   const nodes = project.getNodes();
   const sources = project.getSources();
 
+  // Build supplementary child entries for sources that may not appear in
+  // child_map. If model X lists source S in its parent_map, then S→X is
+  // a downstream relationship.
+  const supplementedChildMap: Record<string, string[]> = { ...childMap };
+  for (const [nodeId, parents] of Object.entries(parentMap)) {
+    for (const parentId of parents) {
+      if (parentId.startsWith("source.")) {
+        if (!supplementedChildMap[parentId]) {
+          supplementedChildMap[parentId] = [];
+        }
+        if (!supplementedChildMap[parentId].includes(nodeId)) {
+          supplementedChildMap[parentId].push(nodeId);
+        }
+      }
+    }
+  }
+
   const visitedNodes = new Set<string>();
   const edges: GraphEdge[] = [];
 
@@ -331,7 +348,7 @@ export function buildGraphData(
 
   function expandDownstream(id: string, remainingDepth: number): void {
     if (remainingDepth <= 0) return;
-    const children = childMap[id] ?? [];
+    const children = supplementedChildMap[id] ?? [];
     for (const childId of children) {
       if (isTest(childId)) continue;
       if (!visitedNodes.has(childId)) {
@@ -359,7 +376,7 @@ export function buildGraphData(
   // Count test children for each visited node.
   const testCounts = new Map<string, number>();
   for (const id of visitedNodes) {
-    const children = childMap[id] ?? [];
+    const children = supplementedChildMap[id] ?? [];
     const count = children.filter((c) => isTest(c)).length;
     if (count > 0) {
       testCounts.set(id, count);
@@ -372,7 +389,7 @@ export function buildGraphData(
     const node = nodes[id];
     if (node) {
       const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
-      const children = (childMap[id] ?? []).filter((c) => !isTest(c));
+      const children = (supplementedChildMap[id] ?? []).filter((c) => !isTest(c));
       graphNodes.push({
         id: node.unique_id,
         name: node.name,
@@ -389,7 +406,7 @@ export function buildGraphData(
     const source = sources[id];
     if (source) {
       const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
-      const children = (childMap[id] ?? []).filter((c) => !isTest(c));
+      const children = (supplementedChildMap[id] ?? []).filter((c) => !isTest(c));
       graphNodes.push({
         id: source.unique_id,
         name: source.name,
@@ -405,7 +422,7 @@ export function buildGraphData(
     const resourceType = id.split(".")[0] ?? "unknown";
     const fallbackName = id.split(".").slice(2).join(".") || id;
     const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
-    const children = (childMap[id] ?? []).filter((c) => !isTest(c));
+    const children = (supplementedChildMap[id] ?? []).filter((c) => !isTest(c));
     graphNodes.push({
       id,
       name: fallbackName,
