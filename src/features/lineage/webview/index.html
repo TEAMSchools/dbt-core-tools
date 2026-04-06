@@ -7,31 +7,12 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}}; img-src {{cspSource}};"
     />
+    <link rel="stylesheet" href="{{bundledStyleUri}}" />
     <link rel="stylesheet" href="{{styleUri}}" />
     <title>dbt Lineage</title>
   </head>
   <body>
-    <div id="toolbar">
-      <label id="lock-label">
-        <input type="checkbox" id="lock-toggle" />
-        Lock view
-      </label>
-      <span id="center-label"></span>
-    </div>
-    <svg id="graph"></svg>
-    <div id="context-menu" class="context-menu hidden">
-      <ul>
-        <li data-action="openFile">Open File</li>
-        <li data-action="toggleProperties">Toggle SQL/Properties</li>
-        <li class="separator"></li>
-        <li data-action="runModel">Run Model</li>
-        <li data-action="buildModel">Build Model</li>
-        <li data-action="testModel">Test Model</li>
-        <li data-action="showModel">Show Model</li>
-      </ul>
-    </div>
-    <script src="{{d3Uri}}"></script>
-    <script src="{{elkUri}}"></script>
+    <div id="react-root"></div>
     <script src="{{scriptUri}}"></script>
   </body>
 </html>

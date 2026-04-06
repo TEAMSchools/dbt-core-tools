@@ -68,6 +68,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
           "lineage",
           "webview",
         ),
+        vscode.Uri.joinPath(this._extensionUri, "dist"),
       ],
     };
 
@@ -139,6 +140,47 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  /**
+   * Sends a resetCenter message (bypasses lock toggle) for the currently active node.
+   */
+  private async _sendResetCenter(): Promise<void> {
+    if (!this._view) return;
+
+    const project = getActiveProject();
+    if (!project) {
+      this._postMessage({
+        type: "resetCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No active dbt project",
+      });
+      return;
+    }
+
+    await project.ensureLoaded();
+
+    const nodeId = this._getActiveNodeId(project);
+    if (!nodeId) {
+      this._postMessage({
+        type: "resetCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No dbt model found for this file",
+      });
+      return;
+    }
+
+    const graphData = buildGraphData(project, nodeId, 1);
+    this._postMessage({
+      type: "resetCenter",
+      nodes: graphData.nodes,
+      edges: graphData.edges,
+      currentNodeId: nodeId,
+    });
+  }
+
   private _postMessage(message: unknown): void {
     if (!this._view) {
       return;
@@ -169,6 +211,10 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const { type, nodeId } = message;
 
     switch (type) {
+      case "resetCenter": {
+        await this._sendResetCenter();
+        break;
+      }
       case "openFile": {
         if (!nodeId) return;
         const filePath = resolveNodeFilePath(nodeId);
@@ -221,14 +267,11 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(webviewDir, "styles.css"),
     );
+    const bundledStyleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, "dist", "lineage.css"),
+    );
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "main.js"),
-    );
-    const d3Uri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "vendor", "d3.min.js"),
-    );
-    const elkUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "vendor", "elk.bundled.js"),
+      vscode.Uri.joinPath(this._extensionUri, "dist", "lineage.js"),
     );
     const cspSource = webview.cspSource;
 
@@ -244,9 +287,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html
       .replace(/\{\{styleUri\}\}/g, styleUri.toString())
+      .replace(/\{\{bundledStyleUri\}\}/g, bundledStyleUri.toString())
       .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
-      .replace(/\{\{d3Uri\}\}/g, d3Uri.toString())
-      .replace(/\{\{elkUri\}\}/g, elkUri.toString())
       .replace(/\{\{cspSource\}\}/g, cspSource);
 
     return html;
