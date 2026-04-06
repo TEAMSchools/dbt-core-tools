@@ -33,19 +33,26 @@
     "viewsContainers": {
       "panel": [
         {
-          "id": "dbtCoreToolsPanel",
-          "title": "dbt Core Tools",
+          "id": "dbtLineagePanel",
+          "title": "dbt Lineage",
           "icon": "$(type-hierarchy)"
+        },
+        {
+          "id": "dbtPreviewPanel",
+          "title": "dbt Preview",
+          "icon": "$(table)"
         }
       ]
     },
     "views": {
-      "dbtCoreToolsPanel": [
+      "dbtLineagePanel": [
         {
           "type": "webview",
           "id": "dbtCoreTools.lineageView",
           "name": "dbt Lineage"
-        },
+        }
+      ],
+      "dbtPreviewPanel": [
         {
           "type": "webview",
           "id": "dbtCoreTools.previewView",
