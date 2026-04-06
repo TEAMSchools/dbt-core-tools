@@ -2,7 +2,7 @@
   "name": "dbt-core-tools",
   "displayName": "dbt Core Tools",
   "description": "A thin wrapper around dbt Core CLI for VS Code",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "TEAMSchools",
   "license": "MIT",
   "repository": {
@@ -33,19 +33,26 @@
     "viewsContainers": {
       "panel": [
         {
-          "id": "dbtCoreToolsPanel",
-          "title": "dbt Core Tools",
+          "id": "dbtLineagePanel",
+          "title": "dbt Lineage",
           "icon": "$(type-hierarchy)"
+        },
+        {
+          "id": "dbtPreviewPanel",
+          "title": "dbt Preview",
+          "icon": "$(table)"
         }
       ]
     },
     "views": {
-      "dbtCoreToolsPanel": [
+      "dbtLineagePanel": [
         {
           "type": "webview",
           "id": "dbtCoreTools.lineageView",
           "name": "dbt Lineage"
-        },
+        }
+      ],
+      "dbtPreviewPanel": [
         {
           "type": "webview",
           "id": "dbtCoreTools.previewView",
@@ -163,18 +170,13 @@
           "when": "dbtCoreTools.isDbtSqlFileWithSources"
         },
         {
-          "command": "dbtCoreTools.showLineage",
+          "command": "dbtCoreTools.showCompiledSql",
           "group": "navigation@6",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "command": "dbtCoreTools.showCompiledSql",
-          "group": "navigation@7",
-          "when": "dbtCoreTools.isDbtSqlFile"
-        },
-        {
           "command": "dbtCoreTools.toggleProperties",
-          "group": "navigation@8",
+          "group": "navigation@7",
           "when": "dbtCoreTools.isDbtFile"
         }
       ],
@@ -244,7 +246,7 @@
         },
         "dbtCoreTools.showLimit": {
           "type": "integer",
-          "default": 5,
+          "default": 100,
           "description": "Row limit for dbt show"
         },
         "dbtCoreTools.propertiesLocation": {
@@ -296,15 +298,19 @@
     "publish": "npx @vscode/vsce publish"
   },
   "devDependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
-    "d3": "^7.9.0",
-    "elkjs": "^0.11.1",
+    "@xyflow/react": "^12.10.2",
     "esbuild": "^0.28.0",
     "mocha": "^11.7.5",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
   }

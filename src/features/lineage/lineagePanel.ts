@@ -23,6 +23,8 @@ export interface GraphNode {
   materialization: string;
   contractEnforced: boolean;
   testCount: number;
+  hasUpstream: boolean;
+  hasDownstream: boolean;
 }
 
 export interface GraphEdge {
@@ -66,6 +68,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
           "lineage",
           "webview",
         ),
+        vscode.Uri.joinPath(this._extensionUri, "dist"),
       ],
     };
 
@@ -137,6 +140,47 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  /**
+   * Sends a resetCenter message (bypasses lock toggle) for the currently active node.
+   */
+  private async _sendResetCenter(): Promise<void> {
+    if (!this._view) return;
+
+    const project = getActiveProject();
+    if (!project) {
+      this._postMessage({
+        type: "resetCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No active dbt project",
+      });
+      return;
+    }
+
+    await project.ensureLoaded();
+
+    const nodeId = this._getActiveNodeId(project);
+    if (!nodeId) {
+      this._postMessage({
+        type: "resetCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No dbt model found for this file",
+      });
+      return;
+    }
+
+    const graphData = buildGraphData(project, nodeId, 1);
+    this._postMessage({
+      type: "resetCenter",
+      nodes: graphData.nodes,
+      edges: graphData.edges,
+      currentNodeId: nodeId,
+    });
+  }
+
   private _postMessage(message: unknown): void {
     if (!this._view) {
       return;
@@ -167,6 +211,10 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const { type, nodeId } = message;
 
     switch (type) {
+      case "resetCenter": {
+        await this._sendResetCenter();
+        break;
+      }
       case "openFile": {
         if (!nodeId) return;
         const filePath = resolveNodeFilePath(nodeId);
@@ -186,7 +234,14 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
           type: "mergeGraph",
           nodes: graphData.nodes,
           edges: graphData.edges,
+          expandedNodeId: nodeId,
+          expandedDirection: message.direction,
         });
+        break;
+      }
+      case "collapse": {
+        // Rebuild graph from current center at base depth, clearing expanded state
+        await this._sendResetCenter();
         break;
       }
       case "runModel":
@@ -219,14 +274,11 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(webviewDir, "styles.css"),
     );
+    const bundledStyleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, "dist", "lineage.css"),
+    );
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "main.js"),
-    );
-    const d3Uri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "vendor", "d3.min.js"),
-    );
-    const elkUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "vendor", "elk.bundled.js"),
+      vscode.Uri.joinPath(this._extensionUri, "dist", "lineage.js"),
     );
     const cspSource = webview.cspSource;
 
@@ -242,9 +294,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html
       .replace(/\{\{styleUri\}\}/g, styleUri.toString())
+      .replace(/\{\{bundledStyleUri\}\}/g, bundledStyleUri.toString())
       .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
-      .replace(/\{\{d3Uri\}\}/g, d3Uri.toString())
-      .replace(/\{\{elkUri\}\}/g, elkUri.toString())
       .replace(/\{\{cspSource\}\}/g, cspSource);
 
     return html;
@@ -264,6 +315,23 @@ export function buildGraphData(
   const parentMap = project.getParentMap();
   const nodes = project.getNodes();
   const sources = project.getSources();
+
+  // Build supplementary child entries for sources that may not appear in
+  // child_map. If model X lists source S in its parent_map, then S→X is
+  // a downstream relationship.
+  const supplementedChildMap: Record<string, string[]> = { ...childMap };
+  for (const [nodeId, parents] of Object.entries(parentMap)) {
+    for (const parentId of parents) {
+      if (parentId.startsWith("source.")) {
+        if (!supplementedChildMap[parentId]) {
+          supplementedChildMap[parentId] = [];
+        }
+        if (!supplementedChildMap[parentId].includes(nodeId)) {
+          supplementedChildMap[parentId].push(nodeId);
+        }
+      }
+    }
+  }
 
   const visitedNodes = new Set<string>();
   const edges: GraphEdge[] = [];
@@ -287,7 +355,7 @@ export function buildGraphData(
 
   function expandDownstream(id: string, remainingDepth: number): void {
     if (remainingDepth <= 0) return;
-    const children = childMap[id] ?? [];
+    const children = supplementedChildMap[id] ?? [];
     for (const childId of children) {
       if (isTest(childId)) continue;
       if (!visitedNodes.has(childId)) {
@@ -315,7 +383,7 @@ export function buildGraphData(
   // Count test children for each visited node.
   const testCounts = new Map<string, number>();
   for (const id of visitedNodes) {
-    const children = childMap[id] ?? [];
+    const children = supplementedChildMap[id] ?? [];
     const count = children.filter((c) => isTest(c)).length;
     if (count > 0) {
       testCounts.set(id, count);
@@ -327,6 +395,10 @@ export function buildGraphData(
     const tc = testCounts.get(id) ?? 0;
     const node = nodes[id];
     if (node) {
+      const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
+      const children = (supplementedChildMap[id] ?? []).filter(
+        (c) => !isTest(c),
+      );
       graphNodes.push({
         id: node.unique_id,
         name: node.name,
@@ -335,11 +407,17 @@ export function buildGraphData(
           (node.config?.["materialized"] as string | undefined) ?? "",
         contractEnforced: node.contract?.enforced ?? false,
         testCount: tc,
+        hasUpstream: parents.length > 0,
+        hasDownstream: children.length > 0,
       });
       continue;
     }
     const source = sources[id];
     if (source) {
+      const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
+      const children = (supplementedChildMap[id] ?? []).filter(
+        (c) => !isTest(c),
+      );
       graphNodes.push({
         id: source.unique_id,
         name: source.name,
@@ -347,11 +425,15 @@ export function buildGraphData(
         materialization: "",
         contractEnforced: false,
         testCount: tc,
+        hasUpstream: parents.length > 0,
+        hasDownstream: children.length > 0,
       });
       continue;
     }
     const resourceType = id.split(".")[0] ?? "unknown";
     const fallbackName = id.split(".").slice(2).join(".") || id;
+    const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
+    const children = (supplementedChildMap[id] ?? []).filter((c) => !isTest(c));
     graphNodes.push({
       id,
       name: fallbackName,
@@ -359,6 +441,8 @@ export function buildGraphData(
       materialization: "",
       contractEnforced: false,
       testCount: tc,
+      hasUpstream: parents.length > 0,
+      hasDownstream: children.length > 0,
     });
   }
 

@@ -11,6 +11,8 @@
 // in unit tests without the VS Code runtime present.
 // The vscode API is accessed lazily via require() inside terminal functions.
 import { execFile } from "child_process";
+import * as path from "path";
+import * as fs from "fs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type VsCode = typeof import("vscode");
@@ -44,6 +46,45 @@ export interface CaptureResult {
   stdout: string;
   stderr: string;
   exitCode: number;
+}
+
+// ---------------------------------------------------------------------------
+// Venv executable resolver
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves the dbt executable path. When dbtCommand is the default "dbt",
+ * checks for a venv dbt executable in the project directory or VIRTUAL_ENV.
+ * Returns the original dbtCommand for non-default values.
+ */
+export function resolveDbtExecutable(
+  dbtCommand: string,
+  projectDir: string,
+): string {
+  if (dbtCommand !== "dbt") {
+    return dbtCommand;
+  }
+
+  const isWin = process.platform === "win32";
+  const binName = isWin ? "dbt.exe" : "dbt";
+  const binDir = isWin ? "Scripts" : "bin";
+
+  // Check .venv in project directory.
+  const venvPath = path.join(projectDir, ".venv", binDir, binName);
+  if (fs.existsSync(venvPath)) {
+    return venvPath;
+  }
+
+  // Check VIRTUAL_ENV environment variable.
+  const virtualEnv = process.env["VIRTUAL_ENV"];
+  if (virtualEnv) {
+    const envPath = path.join(virtualEnv, binDir, binName);
+    if (fs.existsSync(envPath)) {
+      return envPath;
+    }
+  }
+
+  return dbtCommand;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +214,7 @@ function drainQueue(projectName: string): void {
     vscode.TaskScope.Workspace,
     `${TASK_NAME_PREFIX}${projectName}`,
     TASK_SOURCE,
-    new vscode.ShellExecution(command),
+    new vscode.ShellExecution(command, { env: process.env }),
   );
   task.presentationOptions = {
     reveal: vscode.TaskRevealKind.Always,
@@ -254,19 +295,24 @@ export function executeAndCapture(
       return;
     }
 
-    execFile(executable, args, { cwd }, (error, stdout, stderr) => {
-      const exitCode =
-        error?.code !== undefined
-          ? typeof error.code === "number"
-            ? error.code
-            : 1
-          : 0;
+    execFile(
+      executable,
+      args,
+      { cwd, shell: true, env: process.env },
+      (error, stdout, stderr) => {
+        const exitCode =
+          error?.code !== undefined
+            ? typeof error.code === "number"
+              ? error.code
+              : 1
+            : 0;
 
-      resolve({
-        stdout: stdout ?? "",
-        stderr: stderr ?? "",
-        exitCode,
-      });
-    });
+        resolve({
+          stdout: stdout ?? "",
+          stderr: stderr ?? "",
+          exitCode,
+        });
+      },
+    );
   });
 }

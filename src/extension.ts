@@ -70,6 +70,10 @@ export function getOutputChannel(): vscode.OutputChannel {
   return _outputChannel;
 }
 
+export function getManifestStatus(): ManifestStatus | null {
+  return _manifestStatus;
+}
+
 // ---------------------------------------------------------------------------
 // Activation
 // ---------------------------------------------------------------------------

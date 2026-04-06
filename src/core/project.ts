@@ -108,6 +108,7 @@ export class DbtProject {
   private manifest: ManifestData | null = null;
   private _loadPromise: Promise<void> | null = null;
   private _watcher: fs.FSWatcher | null = null;
+  private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _onManifestChanged = new EventEmitter<DbtProject>();
 
   /** Subscribe to manifest reload events. Returns a disposer. */
@@ -156,7 +157,7 @@ export class DbtProject {
         const { getOutputChannel } =
           require("../extension") as typeof import("../extension");
         getOutputChannel().appendLine(
-          `[error] Failed to load manifest for ${this.name}: ${err}`,
+          `[warn] Failed to load manifest for ${this.name}: ${err}`,
         );
       } catch {
         // Extension not yet activated; skip logging.
@@ -274,7 +275,13 @@ export class DbtProject {
     try {
       this._watcher = fs.watch(targetDir, (_event, filename) => {
         if (filename === "manifest.json") {
-          void this.reloadManifest();
+          if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+          }
+          this._debounceTimer = setTimeout(() => {
+            this._debounceTimer = null;
+            void this.reloadManifest();
+          }, 500);
         }
       });
     } catch {
@@ -283,6 +290,10 @@ export class DbtProject {
   }
 
   dispose(): void {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
     this._watcher?.close();
     this._watcher = null;
     this._loadPromise = null;

@@ -1,11 +1,12 @@
-/* dbt Core Tools — Lineage Viewer styles */
+/* dbt Core Tools — Lineage Viewer styles (React Flow) */
 
 * {
   box-sizing: border-box;
 }
 
 html,
-body {
+body,
+#react-root {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -19,7 +20,7 @@ body {
 
 /* ---- Toolbar ---- */
 
-#toolbar {
+.toolbar {
   position: absolute;
   top: 8px;
   left: 8px;
@@ -37,7 +38,7 @@ body {
   font-size: 0.85em;
 }
 
-#lock-label {
+.lock-label {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -45,7 +46,21 @@ body {
   user-select: none;
 }
 
-#center-label {
+.reset-btn {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.reset-btn:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.center-label {
   color: var(--vscode-descriptionForeground);
   font-size: 0.9em;
   max-width: 200px;
@@ -54,106 +69,90 @@ body {
   white-space: nowrap;
 }
 
-/* ---- SVG canvas ---- */
+/* ---- Custom nodes ---- */
 
-#graph {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-/* ---- Nodes ---- */
-
-.node rect {
-  rx: 4px;
-  ry: 4px;
-  stroke-width: 1.5;
-}
-
-.node.current rect {
-  stroke-width: 3;
-  stroke: var(--vscode-focusBorder);
-}
-
-.node.contracted rect {
-  stroke-dasharray: 5, 3;
-}
-
-.node-label {
+.dbt-node {
+  position: relative;
   font-family: var(--vscode-font-family);
+}
+
+.dbt-node.current {
+  box-shadow: 0 0 8px var(--vscode-focusBorder, #007acc);
+}
+
+.node-name {
   font-size: 12px;
-  fill: var(--vscode-editor-foreground, var(--vscode-foreground));
-  pointer-events: none;
-  dominant-baseline: middle;
-  text-anchor: middle;
+  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+  text-align: center;
+  white-space: nowrap;
 }
 
-.node-label-mat {
-  font-family: var(--vscode-font-family);
+.node-mat {
   font-size: 10px;
-  fill: var(--vscode-descriptionForeground);
-  pointer-events: none;
-  dominant-baseline: middle;
-  text-anchor: middle;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+  margin-top: 2px;
 }
 
 .node-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
   font-size: 11px;
-  pointer-events: none;
-  dominant-baseline: middle;
-  text-anchor: middle;
 }
 
 .test-badge {
-  pointer-events: none;
-}
-
-.test-badge text {
-  font-family: var(--vscode-font-family);
+  position: absolute;
+  bottom: 2px;
+  left: 8px;
+  font-size: 9px;
   font-weight: 600;
+  color: var(--vscode-terminal-ansiBrightYellow, #e6e6a8);
+  background: rgba(230, 230, 168, 0.25);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ---- Edges ---- */
+/* ---- Expand buttons ---- */
 
-.edge path {
-  fill: none;
-  stroke: var(--vscode-panel-border);
-  stroke-width: 1.5;
-}
-
-.edge-arrow {
-  fill: var(--vscode-panel-border);
-}
-
-/* ---- Expand handles ---- */
-
-.expand-handle {
+.expand-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--vscode-button-background);
+  background: var(--vscode-editor-background);
+  color: var(--vscode-button-background);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
   opacity: 0.6;
+  z-index: 5;
 }
 
-.expand-handle:hover {
+.expand-btn:hover {
   opacity: 1;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
 }
 
-.expand-circle {
-  fill: var(--vscode-editor-background);
-  stroke: var(--vscode-button-background);
-  stroke-width: 1.5;
+.expand-btn-left {
+  left: -26px;
 }
 
-.expand-handle:hover .expand-circle {
-  fill: var(--vscode-button-background);
-}
-
-.expand-glyph {
-  fill: var(--vscode-button-background);
-  pointer-events: none;
-  font-weight: 600;
-}
-
-.expand-handle:hover .expand-glyph {
-  fill: var(--vscode-button-foreground);
+.expand-btn-right {
+  right: -26px;
 }
 
 /* ---- Context menu ---- */
@@ -170,10 +169,6 @@ body {
   padding: 4px 0;
   min-width: 160px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.context-menu.hidden {
-  display: none;
 }
 
 .context-menu ul {
@@ -212,12 +207,31 @@ body {
 
 /* ---- Empty state ---- */
 
-#empty-state {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   color: var(--vscode-descriptionForeground);
-  pointer-events: none;
+}
+
+/* ---- React Flow overrides ---- */
+
+.react-flow__background {
+  background-color: var(--vscode-editor-background) !important;
+}
+
+.react-flow__controls button {
+  background-color: var(--vscode-button-background) !important;
+  color: var(--vscode-button-foreground) !important;
+  border: 1px solid var(--vscode-panel-border) !important;
+}
+
+.react-flow__controls button:hover {
+  background-color: var(--vscode-button-hoverBackground) !important;
+}
+
+.react-flow__controls button svg {
+  fill: var(--vscode-button-foreground) !important;
 }

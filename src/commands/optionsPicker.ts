@@ -3,7 +3,7 @@
  *
  * Provides:
  * - buildSelector  — pure function that builds a dbt model selector string
- * - showOptionsPicker — vscode two-step quick pick for run/build/test
+ * - showOptionsPicker — vscode multi-select quick pick for run/build/test
  */
 
 // vscode is NOT imported at the top level so this module can be loaded
@@ -43,11 +43,11 @@ export function buildSelector(
 // ---------------------------------------------------------------------------
 
 /**
- * Shows a two-step quick pick:
- * Step 1: plain run vs run with options
- * Step 2 (only if "with options" chosen): multi-select for scope and flags
+ * Shows a multi-select quick pick for scope and flags.
  *
- * Returns the selected options, empty {} for plain run, or undefined if cancelled.
+ * - Enter with nothing selected → run vanilla command (returns {})
+ * - Enter with selections → returns those options
+ * - Escape → cancel (returns undefined)
  */
 export async function showOptionsPicker(
   subcommand: string,
@@ -57,30 +57,6 @@ export async function showOptionsPicker(
 
   const label = subcommand.charAt(0).toUpperCase() + subcommand.slice(1);
 
-  // Step 1: plain vs with-options
-  const choice = await vscode.window.showQuickPick(
-    [
-      { label, description: `${label} with no additional options` },
-      {
-        label: `${label} with options...`,
-        description: "Choose scope and flags",
-      },
-    ],
-    {
-      title: `dbt ${label}`,
-      placeHolder: `How would you like to ${subcommand}?`,
-    },
-  );
-
-  if (!choice) {
-    return undefined;
-  }
-
-  if (choice.label === label) {
-    return {};
-  }
-
-  // Step 2: multi-select options
   const UPSTREAM = "Upstream (+ prefix)";
   const DOWNSTREAM = "Downstream (+ suffix)";
   const FULL_REFRESH = "Full Refresh";
@@ -99,8 +75,8 @@ export async function showOptionsPicker(
 
   const selected = await vscode.window.showQuickPick(items, {
     canPickMany: true,
-    title: `dbt ${label} Options`,
-    placeHolder: "Select options (press Enter with none selected for defaults)",
+    title: `dbt ${label}`,
+    placeHolder: "Select options or press Enter for defaults",
   });
 
   if (selected === undefined) {
