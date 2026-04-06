@@ -15,7 +15,7 @@ import {
   buildModel,
   testModel,
   showModel,
-  setExtensionContext,
+  setPreviewProvider,
 } from "./commands/modelCommands";
 import { stageExternalSources } from "./commands/stageExternal";
 import { initExecutor } from "./core/executor";
@@ -30,6 +30,7 @@ import { DbtCompletionProvider } from "./features/completion";
 import { toggleProperties } from "./features/properties";
 import { syncColumns } from "./features/columnSync";
 import { LineageViewProvider } from "./features/lineage/lineagePanel";
+import { PreviewViewProvider } from "./features/preview/previewPanel";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -76,9 +77,6 @@ export function getOutputChannel(): vscode.OutputChannel {
 export async function activate(
   context: vscode.ExtensionContext,
 ): Promise<void> {
-  // Make the extension context available to model commands (e.g. showModel).
-  setExtensionContext(context);
-
   // Initialize the task-based command executor.
   initExecutor(context);
 
@@ -105,6 +103,18 @@ export async function activate(
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
   );
+
+  // Register preview view provider.
+  const previewProvider = new PreviewViewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      PreviewViewProvider.viewType,
+      previewProvider,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
+
+  setPreviewProvider(previewProvider);
 
   // Set initial context keys and lazy-load for whatever is open on startup.
   await updateContextKeys(vscode.window.activeTextEditor);
@@ -241,6 +251,7 @@ export async function activate(
       new DbtCompletionProvider(),
       "(",
       "{",
+      "%",
     ),
   );
 

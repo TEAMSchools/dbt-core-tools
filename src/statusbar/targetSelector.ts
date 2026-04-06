@@ -8,6 +8,7 @@ import * as os from "os";
 import * as vscode from "vscode";
 import { DbtProject } from "../core/project";
 import { parseProfileTargets } from "../core/profiles";
+import { resolveWorkspacePath } from "../commands/modelCommands";
 
 export class TargetSelector {
   private readonly _item: vscode.StatusBarItem;
@@ -49,8 +50,11 @@ export class TargetSelector {
     }
 
     const config = vscode.workspace.getConfiguration("dbtCoreTools");
+    const rawProfilesDir = config.get<string>("profilesDir", "") || undefined;
+    const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
     const profilesDir =
-      config.get<string>("profilesDir", "") || path.join(os.homedir(), ".dbt");
+      resolveWorkspacePath(rawProfilesDir, wsRoot) ??
+      path.join(os.homedir(), ".dbt");
     const profilesPath = path.join(profilesDir, "profiles.yml");
 
     const { targets, defaultTarget } = parseProfileTargets(

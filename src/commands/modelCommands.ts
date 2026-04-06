@@ -9,22 +9,39 @@ import * as vscode from "vscode";
 import { buildDbtCommand, executeInTerminal } from "../core/executor";
 import { getActiveProject, getDeferToggle } from "../extension";
 import { buildSelector, showOptionsPicker } from "./optionsPicker";
-import { showModelPreview } from "../features/preview/previewPanel";
 
 // ---------------------------------------------------------------------------
-// Extension context (set during activation for commands that need it)
+// Preview provider (set during activation)
 // ---------------------------------------------------------------------------
 
-let _context: vscode.ExtensionContext | undefined;
+let _previewProvider: { showPreview(): Promise<void> } | undefined;
 
-/** Called from extension.ts activate() so commands can access the context. */
-export function setExtensionContext(ctx: vscode.ExtensionContext): void {
-  _context = ctx;
+/** Called from extension.ts activate() to wire the preview panel. */
+export function setPreviewProvider(provider: {
+  showPreview(): Promise<void>;
+}): void {
+  _previewProvider = provider;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Resolves a potentially relative path against the workspace root.
+ * Returns undefined if the input is falsy.
+ */
+export function resolveWorkspacePath(
+  inputPath: string | undefined,
+  wsRoot: string,
+): string | undefined {
+  if (!inputPath) {
+    return undefined;
+  }
+  return path.isAbsolute(inputPath)
+    ? inputPath
+    : path.resolve(wsRoot, inputPath);
+}
 
 /**
  * Extracts the model name from the active SQL editor's filename (sans extension).
@@ -63,7 +80,9 @@ export function getCommandOptions(projectName: string): {
 } {
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
-  const profilesDir = config.get<string>("profilesDir", "") || undefined;
+  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const rawProfilesDir = config.get<string>("profilesDir", "") || undefined;
+  const profilesDir = resolveWorkspacePath(rawProfilesDir, wsRoot);
   const target = config.get<Record<string, string>>("target", {})[projectName];
 
   // Only include deferState when the toggle is actually on.
@@ -75,11 +94,7 @@ export function getCommandOptions(projectName: string): {
       {},
     )[projectName];
     if (deferManifestPath) {
-      // Resolve to absolute path so --state works regardless of terminal cwd.
-      const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-      deferState = path.isAbsolute(deferManifestPath)
-        ? deferManifestPath
-        : path.resolve(wsRoot, deferManifestPath);
+      deferState = resolveWorkspacePath(deferManifestPath, wsRoot);
     }
   }
 
@@ -144,11 +159,11 @@ export const testModel = (): Promise<void> => runModelCommand("test");
 
 /** Shows the model preview panel for the active SQL file. */
 export async function showModel(): Promise<void> {
-  if (!_context) {
+  if (!_previewProvider) {
     vscode.window.showErrorMessage(
-      "dbt Core Tools: Extension context not available. Please reload the window.",
+      "dbt Core Tools: Preview provider not available. Please reload the window.",
     );
     return;
   }
-  await showModelPreview(_context);
+  await _previewProvider.showPreview();
 }

@@ -10,6 +10,7 @@ import * as vscode from "vscode";
 import { spawn, ChildProcess } from "child_process";
 import { buildDbtCommand, splitCommand } from "../core/executor";
 import { getDiscovery, getOutputChannel } from "../extension";
+import { resolveWorkspacePath } from "../commands/modelCommands";
 
 // ---------------------------------------------------------------------------
 // State
@@ -99,7 +100,10 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
 
   // Build the parse command.
   const dbtCommand = config.get<string>("dbtCommand", "dbt");
-  const profilesDir = config.get<string>("profilesDir", "");
+  const rawProfilesDir = config.get<string>("profilesDir", "");
+  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const profilesDir =
+    resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
 
   const cmd = buildDbtCommand({
     dbtCommand,

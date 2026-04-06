@@ -104,6 +104,15 @@ body {
   text-anchor: middle;
 }
 
+.test-badge {
+  pointer-events: none;
+}
+
+.test-badge text {
+  font-family: var(--vscode-font-family);
+  font-weight: 600;
+}
+
 /* ---- Edges ---- */
 
 .edge path {
@@ -120,23 +129,31 @@ body {
 
 .expand-handle {
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .expand-handle:hover {
   opacity: 1;
 }
 
-.expand-handle polygon {
+.expand-circle {
+  fill: var(--vscode-editor-background);
+  stroke: var(--vscode-button-background);
+  stroke-width: 1.5;
+}
+
+.expand-handle:hover .expand-circle {
   fill: var(--vscode-button-background);
 }
 
-.expand-handle text {
-  font-size: 9px;
-  fill: var(--vscode-button-foreground);
+.expand-glyph {
+  fill: var(--vscode-button-background);
   pointer-events: none;
-  dominant-baseline: middle;
-  text-anchor: middle;
+  font-weight: 600;
+}
+
+.expand-handle:hover .expand-glyph {
+  fill: var(--vscode-button-foreground);
 }
 
 /* ---- Context menu ---- */

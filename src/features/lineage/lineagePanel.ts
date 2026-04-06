@@ -2,7 +2,7 @@
  * Lineage Viewer — persistent bottom panel using WebviewViewProvider.
  *
  * Renders a DAG of upstream/downstream dependencies for the active model
- * using D3.js and dagre in a webview view (Panel area).
+ * using D3.js and ELK in a webview view (Panel area).
  */
 
 import * as vscode from "vscode";
@@ -22,6 +22,7 @@ export interface GraphNode {
   resourceType: string;
   materialization: string;
   contractEnforced: boolean;
+  testCount: number;
 }
 
 export interface GraphEdge {
@@ -152,7 +153,9 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     if (!editor) return null;
     const filePath = editor.document.uri.fsPath;
     const node = project.findNodeByFilePath(filePath);
-    return node?.unique_id ?? null;
+    if (node) return node.unique_id;
+    const source = project.findSourceByFilePath(filePath);
+    return source?.unique_id ?? null;
   }
 
   private async _handleMessage(message: {
@@ -180,10 +183,9 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
         await project.ensureLoaded();
         const graphData = buildGraphData(project, nodeId, 1);
         this._postMessage({
-          type: "setGraph",
+          type: "mergeGraph",
           nodes: graphData.nodes,
           edges: graphData.edges,
-          currentNodeId: nodeId,
         });
         break;
       }
@@ -223,8 +225,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const d3Uri = webview.asWebviewUri(
       vscode.Uri.joinPath(webviewDir, "vendor", "d3.min.js"),
     );
-    const dagreUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, "vendor", "dagre.min.js"),
+    const elkUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(webviewDir, "vendor", "elk.bundled.js"),
     );
     const cspSource = webview.cspSource;
 
@@ -242,7 +244,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       .replace(/\{\{styleUri\}\}/g, styleUri.toString())
       .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
       .replace(/\{\{d3Uri\}\}/g, d3Uri.toString())
-      .replace(/\{\{dagreUri\}\}/g, dagreUri.toString())
+      .replace(/\{\{elkUri\}\}/g, elkUri.toString())
       .replace(/\{\{cspSource\}\}/g, cspSource);
 
     return html;
@@ -250,7 +252,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Graph building (unchanged from original)
+// Graph building
 // ---------------------------------------------------------------------------
 
 export function buildGraphData(
@@ -266,10 +268,15 @@ export function buildGraphData(
   const visitedNodes = new Set<string>();
   const edges: GraphEdge[] = [];
 
+  function isTest(id: string): boolean {
+    return id.startsWith("test.");
+  }
+
   function expandUpstream(id: string, remainingDepth: number): void {
     if (remainingDepth <= 0) return;
     const parents = parentMap[id] ?? [];
     for (const parentId of parents) {
+      if (isTest(parentId)) continue;
       if (!visitedNodes.has(parentId)) {
         visitedNodes.add(parentId);
         expandUpstream(parentId, remainingDepth - 1);
@@ -282,6 +289,7 @@ export function buildGraphData(
     if (remainingDepth <= 0) return;
     const children = childMap[id] ?? [];
     for (const childId of children) {
+      if (isTest(childId)) continue;
       if (!visitedNodes.has(childId)) {
         visitedNodes.add(childId);
         expandDownstream(childId, remainingDepth - 1);
@@ -297,15 +305,26 @@ export function buildGraphData(
   const edgeSet = new Set<string>();
   const uniqueEdges: GraphEdge[] = [];
   for (const edge of edges) {
-    const key = `${edge.source}→${edge.target}`;
+    const key = `${edge.source}\u2192${edge.target}`;
     if (!edgeSet.has(key)) {
       edgeSet.add(key);
       uniqueEdges.push(edge);
     }
   }
 
+  // Count test children for each visited node.
+  const testCounts = new Map<string, number>();
+  for (const id of visitedNodes) {
+    const children = childMap[id] ?? [];
+    const count = children.filter((c) => isTest(c)).length;
+    if (count > 0) {
+      testCounts.set(id, count);
+    }
+  }
+
   const graphNodes: GraphNode[] = [];
   for (const id of visitedNodes) {
+    const tc = testCounts.get(id) ?? 0;
     const node = nodes[id];
     if (node) {
       graphNodes.push({
@@ -315,6 +334,7 @@ export function buildGraphData(
         materialization:
           (node.config?.["materialized"] as string | undefined) ?? "",
         contractEnforced: node.contract?.enforced ?? false,
+        testCount: tc,
       });
       continue;
     }
@@ -326,6 +346,7 @@ export function buildGraphData(
         resourceType: source.resource_type,
         materialization: "",
         contractEnforced: false,
+        testCount: tc,
       });
       continue;
     }
@@ -337,6 +358,7 @@ export function buildGraphData(
       resourceType,
       materialization: "",
       contractEnforced: false,
+      testCount: tc,
     });
   }
 

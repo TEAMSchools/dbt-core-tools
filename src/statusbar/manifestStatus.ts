@@ -6,11 +6,30 @@
 import * as vscode from "vscode";
 import { DbtProject } from "../core/project";
 
+/**
+ * Formats a Date as a relative time string like "just now", "5m ago", "2h ago", "1d ago".
+ * Accepts an optional `now` parameter for testability.
+ */
+export function formatRelativeTime(date: Date, now: Date = new Date()): string {
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  return `${diffDay}d ago`;
+}
+
 export class ManifestStatus {
   private readonly _item: vscode.StatusBarItem;
 
   /** Whether the item is currently showing a running animation. */
   private _isRunning = false;
+  private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private _lastProject: DbtProject | null = null;
 
   constructor() {
     this._item = vscode.window.createStatusBarItem(
@@ -32,23 +51,24 @@ export class ManifestStatus {
     }
 
     if (!project) {
+      this._lastProject = null;
       this._item.hide();
+      this._stopRefresh();
       return;
     }
+
+    this._lastProject = project;
 
     const mtime = await project.getManifestMtime();
     if (!mtime) {
       this._item.text = "parsed: never";
       this._item.tooltip =
         "Manifest has not been generated yet. Click to run dbt parse.";
+      this._stopRefresh();
     } else {
-      const timeStr = mtime.toLocaleTimeString(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
-      this._item.text = `parsed: ${timeStr}`;
+      this._item.text = `parsed: ${formatRelativeTime(mtime)}`;
       this._item.tooltip = `Manifest last parsed at ${mtime.toLocaleString()}. Click to re-parse.`;
+      this._startRefresh();
     }
 
     this._item.show();
@@ -73,7 +93,24 @@ export class ManifestStatus {
     await this.update(project);
   }
 
+  private _startRefresh(): void {
+    if (this._refreshInterval) {
+      return;
+    }
+    this._refreshInterval = setInterval(() => {
+      void this.update(this._lastProject);
+    }, 30_000);
+  }
+
+  private _stopRefresh(): void {
+    if (this._refreshInterval) {
+      clearInterval(this._refreshInterval);
+      this._refreshInterval = null;
+    }
+  }
+
   dispose(): void {
+    this._stopRefresh();
     this._item.dispose();
   }
 }
