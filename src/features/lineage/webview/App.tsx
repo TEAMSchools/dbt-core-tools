@@ -36,13 +36,23 @@ interface IncomingEdge {
 }
 
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>(
+    [],
+  );
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [locked, setLocked] = useState(true);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
-  const [emptyMessage, setEmptyMessage] = useState("No lineage data available.");
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
-  const expandedRef = useRef<Map<string, { upstream: boolean; downstream: boolean }>>(new Map());
+  const [emptyMessage, setEmptyMessage] = useState(
+    "No lineage data available.",
+  );
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    nodeId: string;
+  } | null>(null);
+  const expandedRef = useRef<
+    Map<string, { upstream: boolean; downstream: boolean }>
+  >(new Map());
   // Keep a ref to edges for use inside setNodes callback
   const edgesRef = useRef<Edge[]>([]);
   const currentNodeIdRef = useRef<string | null>(null);
@@ -56,9 +66,15 @@ function App() {
   }, [currentNodeId]);
 
   const buildFlowNodes = useCallback(
-    (incoming: IncomingNode[], centerId: string | null): Node<GraphNodeData>[] => {
+    (
+      incoming: IncomingNode[],
+      centerId: string | null,
+    ): Node<GraphNodeData>[] => {
       return incoming.map((n) => {
-        const expanded = expandedRef.current.get(n.id) ?? { upstream: false, downstream: false };
+        const expanded = expandedRef.current.get(n.id) ?? {
+          upstream: false,
+          downstream: false,
+        };
         return {
           id: n.id,
           type: "dbtNode",
@@ -86,10 +102,17 @@ function App() {
   }, []);
 
   const applyGraph = useCallback(
-    (incomingNodes: IncomingNode[], incomingEdges: IncomingEdge[], centerId: string | null) => {
+    (
+      incomingNodes: IncomingNode[],
+      incomingEdges: IncomingEdge[],
+      centerId: string | null,
+    ) => {
       const flowNodes = buildFlowNodes(incomingNodes, centerId);
       const flowEdges = buildFlowEdges(incomingEdges);
-      const { nodes: layouted, edges: layoutedEdges } = layoutGraph(flowNodes, flowEdges);
+      const { nodes: layouted, edges: layoutedEdges } = layoutGraph(
+        flowNodes,
+        flowEdges,
+      );
       setNodes(layouted);
       setEdges(layoutedEdges);
       setCurrentNodeId(centerId);
@@ -108,24 +131,49 @@ function App() {
           if (!locked) {
             expandedRef.current.clear();
             setEmptyMessage(msg.emptyMessage ?? "No lineage data available.");
-            applyGraph(msg.nodes ?? [], msg.edges ?? [], msg.currentNodeId ?? null);
+            applyGraph(
+              msg.nodes ?? [],
+              msg.edges ?? [],
+              msg.currentNodeId ?? null,
+            );
           }
           break;
 
         case "resetCenter":
           expandedRef.current.clear();
           setEmptyMessage(msg.emptyMessage ?? "No lineage data available.");
-          applyGraph(msg.nodes ?? [], msg.edges ?? [], msg.currentNodeId ?? null);
+          applyGraph(
+            msg.nodes ?? [],
+            msg.edges ?? [],
+            msg.currentNodeId ?? null,
+          );
           break;
 
         case "mergeGraph": {
           const newIncomingNodes: IncomingNode[] = msg.nodes ?? [];
           const newIncomingEdges: IncomingEdge[] = msg.edges ?? [];
 
+          // Track expanded state for button display
+          if (msg.expandedNodeId && msg.expandedDirection) {
+            const prev = expandedRef.current.get(msg.expandedNodeId) ?? {
+              upstream: false,
+              downstream: false,
+            };
+            expandedRef.current.set(msg.expandedNodeId, {
+              ...prev,
+              [msg.expandedDirection]: true,
+            });
+          }
+
           setNodes((prev) => {
             const existingIds = new Set(prev.map((n) => n.id));
-            const filteredNew = newIncomingNodes.filter((n) => !existingIds.has(n.id));
-            const newFlowNodes = buildFlowNodes(filteredNew, currentNodeIdRef.current);
+            const filteredNew = newIncomingNodes.filter(
+              (n) => !existingIds.has(n.id),
+            );
+            const newFlowNodes = buildFlowNodes(
+              filteredNew,
+              currentNodeIdRef.current,
+            );
             const allNodes = [...prev, ...newFlowNodes];
 
             const currentEdges = edgesRef.current;
@@ -136,7 +184,10 @@ function App() {
             const newFlowEdges = buildFlowEdges(filteredNewEdges);
             const allEdges = [...currentEdges, ...newFlowEdges];
 
-            const { nodes: layouted, edges: layoutedEdges } = layoutGraph(allNodes, allEdges);
+            const { nodes: layouted, edges: layoutedEdges } = layoutGraph(
+              allNodes,
+              allEdges,
+            );
             setEdges(layoutedEdges);
             return layouted;
           });
@@ -199,7 +250,11 @@ function App() {
           />
           Lock view
         </label>
-        <button className="reset-btn" onClick={onReset} title="Re-center on current model">
+        <button
+          className="reset-btn"
+          onClick={onReset}
+          title="Re-center on current model"
+        >
           Reset
         </button>
         <span className="center-label">
@@ -227,10 +282,14 @@ function App() {
         >
           <ul>
             <li onClick={() => handleContextAction("openFile")}>Open File</li>
-            <li onClick={() => handleContextAction("toggleProperties")}>Toggle SQL/Properties</li>
+            <li onClick={() => handleContextAction("toggleProperties")}>
+              Toggle SQL/Properties
+            </li>
             <li className="separator" />
             <li onClick={() => handleContextAction("runModel")}>Run Model</li>
-            <li onClick={() => handleContextAction("buildModel")}>Build Model</li>
+            <li onClick={() => handleContextAction("buildModel")}>
+              Build Model
+            </li>
             <li onClick={() => handleContextAction("testModel")}>Test Model</li>
             <li onClick={() => handleContextAction("showModel")}>Show Model</li>
           </ul>

@@ -234,7 +234,14 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
           type: "mergeGraph",
           nodes: graphData.nodes,
           edges: graphData.edges,
+          expandedNodeId: nodeId,
+          expandedDirection: message.direction,
         });
+        break;
+      }
+      case "collapse": {
+        // Rebuild graph from current center at base depth, clearing expanded state
+        await this._sendResetCenter();
         break;
       }
       case "runModel":
@@ -389,7 +396,9 @@ export function buildGraphData(
     const node = nodes[id];
     if (node) {
       const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
-      const children = (supplementedChildMap[id] ?? []).filter((c) => !isTest(c));
+      const children = (supplementedChildMap[id] ?? []).filter(
+        (c) => !isTest(c),
+      );
       graphNodes.push({
         id: node.unique_id,
         name: node.name,
@@ -406,7 +415,9 @@ export function buildGraphData(
     const source = sources[id];
     if (source) {
       const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
-      const children = (supplementedChildMap[id] ?? []).filter((c) => !isTest(c));
+      const children = (supplementedChildMap[id] ?? []).filter(
+        (c) => !isTest(c),
+      );
       graphNodes.push({
         id: source.unique_id,
         name: source.name,

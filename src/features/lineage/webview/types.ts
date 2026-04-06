@@ -1,4 +1,5 @@
 export interface GraphNodeData {
+  [key: string]: unknown;
   id: string;
   name: string;
   resourceType: string;
