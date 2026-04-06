@@ -50,7 +50,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - `src/features/` — Compiled SQL provider, parse-on-save, properties toggle, column sync, definition/hover/completion providers, lineage webview, preview webview
 - `src/utils/` — Regex patterns for ref/source/macro extraction
 
-**Build:** esbuild bundles `src/extension.ts` → single `dist/extension.js` (CJS, node platform, `vscode` external).
+**Build:** esbuild produces two bundles: `src/extension.ts` → `dist/extension.js` (CJS, node platform, `vscode` external) and `src/features/lineage/webview/App.tsx` → `dist/lineage.js` + `dist/lineage.css` (IIFE, browser platform, JSX automatic). See `esbuild.js`.
 
 **Extension activation:** Triggered by `workspaceContains:**/dbt_project.yml`. Projects discovered via `workspace.findFiles`, filtering out `dbt_packages/` and `dbt_modules/`. Manifests loaded lazily per project on first editor focus.
 
@@ -61,7 +61,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - TypeScript strict mode enabled
 - Zero runtime dependencies — everything bundled via esbuild
 - `vscode` module is external (provided by VS Code runtime)
-- Webview views use plain HTML/JS (no React/Svelte) with D3.js + ELK (vendored locally, no CDN — extension runs in Codespaces)
+- Preview webview uses plain HTML/JS; lineage webview uses React Flow (`@xyflow/react`) + dagre, bundled by esbuild to `dist/lineage.js`
 - Extension depends on `redhat.vscode-yaml` for YAML schema validation
 - Extension depends on `samuelcolvin.jinjahtml` for Jinja-SQL syntax highlighting
 - Settings are namespaced under `dbtCoreTools.*`
@@ -70,15 +70,16 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` statically imports from `../extension`)
 - Command execution uses VS Code Task API (`ShellExecution` + `onDidEndTaskProcess`) for reliable completion detection — `initExecutor(context)` must be called in `activate()`
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
-- Lineage webview has two active message types: `updateCenter` (respects lock toggle, used for editor-change and manifest-reload updates) and `mergeGraph` (adds nodes/edges without changing selection, used for expand). The webview also handles a legacy `setGraph` type (bypasses lock toggle) but the backend no longer sends it.
+- Lineage webview has three message types: `updateCenter` (respects lock toggle), `resetCenter` (bypasses lock, used by reset button), and `mergeGraph` (adds nodes/edges for expand). Lock defaults to on.
 - Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
-- Webview assets (HTML/JS/CSS in `src/features/*/webview/`) are NOT bundled by esbuild — they're served at runtime via `webview.asWebviewUri()` and must be included in the VSIX
+- Preview webview assets (HTML/JS/CSS in `src/features/preview/webview/`) are NOT bundled by esbuild — served at runtime via `webview.asWebviewUri()`. Lineage webview is bundled to `dist/` but its `index.html` and `styles.css` are still served from source.
 - `.vscodeignore` excludes `src/**` but un-excludes `!src/features/*/webview/**` — any new webview directories need the same exception
 - Tests for modules that statically import `vscode` need a stub: use `Module._resolveFilename` to redirect `vscode` to a minimal shim before importing the module under test (see `test/unit/modelCommands.test.ts` for the pattern)
 - `resolveWorkspacePath(path, wsRoot)` in `modelCommands.ts` resolves relative config paths to absolute — use it instead of inline `path.isAbsolute`/`path.resolve` when reading `profilesDir` or similar settings
-- Both lineage and preview panels are `WebviewViewProvider`s in the bottom Panel area — preview provider is wired via `setPreviewProvider()` from `extension.ts`. All `WebviewViewProvider`s must register `onDidDispose` to reset `_view`, `_ready`, and pending message state.
+- `resolveDbtExecutable(dbtCommand, projectDir)` in `executor.ts` auto-detects `.venv/bin/dbt` when `dbtCommand` is default `"dbt"` — use `getCommandOptions()` which calls this automatically
+- Lineage and preview panels are `WebviewViewProvider`s in separate Panel containers (`dbtLineagePanel`, `dbtPreviewPanel`). Preview provider is wired via `setPreviewProvider()` from `extension.ts`. All `WebviewViewProvider`s must register `onDidDispose` to reset `_view`, `_ready`, and pending message state.
 - Preview panel uses a generation counter (`_generation`) to discard stale `dbt show` results when the user triggers multiple previews before the first completes
 - Completion trigger characters in `extension.ts` (`registerCompletionItemProvider`) must match every prefix pattern in `completion.ts` — adding a pattern like `/\{%-?\s*$/` without registering `"%"` as a trigger character makes it unreachable except via manual Ctrl+Space
 - Preview panel buffers messages as a queue (`_pendingMessages[]`) because `showPreview()` posts loading then results before the webview may be ready; lineage panel uses a single slot (`_pendingMessage`) since it only ever has one pending state
@@ -89,3 +90,4 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
 - `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; use `waitForParse(projectName)` from `parseOnSave.ts` before spawning compile
+- Manifest file watcher is debounced (500ms) to avoid reading partial writes — transient JSON parse errors are logged as `[warn]` not `[error]`
