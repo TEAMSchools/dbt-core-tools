@@ -12,6 +12,8 @@ v0.0.3 feedback spec: `docs/specs/2026-04-05-v0.0.3-feedback-design.md`
 v0.0.3 feedback plan: `docs/plans/2026-04-05-v0.0.3-feedback.md`
 v0.0.4 feedback spec: `docs/specs/2026-04-05-v0.0.4-feedback-design.md`
 v0.0.4 feedback plan: `docs/plans/2026-04-05-v0.0.4-feedback.md`
+v0.0.5 feedback spec: `docs/specs/2026-04-06-v0.0.5-feedback-design.md`
+v0.0.5 feedback plan: `docs/plans/2026-04-06-v0.0.5-feedback.md`
 
 ## Build & Test Commands
 
