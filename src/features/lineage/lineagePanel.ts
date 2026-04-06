@@ -93,7 +93,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     });
 
     // Send initial graph data for whatever file is currently open.
-    this.updateCenter();
+    // Use resetCenter (bypasses lock) since lock defaults to on.
+    this._sendResetCenter();
   }
 
   /**
