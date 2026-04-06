@@ -23,6 +23,8 @@ export interface GraphNode {
   materialization: string;
   contractEnforced: boolean;
   testCount: number;
+  hasUpstream: boolean;
+  hasDownstream: boolean;
 }
 
 export interface GraphEdge {
@@ -327,6 +329,8 @@ export function buildGraphData(
     const tc = testCounts.get(id) ?? 0;
     const node = nodes[id];
     if (node) {
+      const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
+      const children = (childMap[id] ?? []).filter((c) => !isTest(c));
       graphNodes.push({
         id: node.unique_id,
         name: node.name,
@@ -335,11 +339,15 @@ export function buildGraphData(
           (node.config?.["materialized"] as string | undefined) ?? "",
         contractEnforced: node.contract?.enforced ?? false,
         testCount: tc,
+        hasUpstream: parents.length > 0,
+        hasDownstream: children.length > 0,
       });
       continue;
     }
     const source = sources[id];
     if (source) {
+      const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
+      const children = (childMap[id] ?? []).filter((c) => !isTest(c));
       graphNodes.push({
         id: source.unique_id,
         name: source.name,
@@ -347,11 +355,15 @@ export function buildGraphData(
         materialization: "",
         contractEnforced: false,
         testCount: tc,
+        hasUpstream: parents.length > 0,
+        hasDownstream: children.length > 0,
       });
       continue;
     }
     const resourceType = id.split(".")[0] ?? "unknown";
     const fallbackName = id.split(".").slice(2).join(".") || id;
+    const parents = (parentMap[id] ?? []).filter((p) => !isTest(p));
+    const children = (childMap[id] ?? []).filter((c) => !isTest(c));
     graphNodes.push({
       id,
       name: fallbackName,
@@ -359,6 +371,8 @@ export function buildGraphData(
       materialization: "",
       contractEnforced: false,
       testCount: tc,
+      hasUpstream: parents.length > 0,
+      hasDownstream: children.length > 0,
     });
   }
 
