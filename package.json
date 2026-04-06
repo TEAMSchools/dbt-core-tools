@@ -246,7 +246,7 @@
         },
         "dbtCoreTools.showLimit": {
           "type": "integer",
-          "default": 5,
+          "default": 100,
           "description": "Row limit for dbt show"
         },
         "dbtCoreTools.propertiesLocation": {
