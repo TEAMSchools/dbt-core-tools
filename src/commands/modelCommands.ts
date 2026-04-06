@@ -6,7 +6,11 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { buildDbtCommand, executeInTerminal } from "../core/executor";
+import {
+  buildDbtCommand,
+  executeInTerminal,
+  resolveDbtExecutable,
+} from "../core/executor";
 import { getActiveProject, getDeferToggle } from "../extension";
 import { buildSelector, showOptionsPicker } from "./optionsPicker";
 
@@ -79,8 +83,9 @@ export function getCommandOptions(projectName: string): {
   deferState: string | undefined;
 } {
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
-  const dbtCommand = config.get<string>("dbtCommand", "dbt");
+  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
   const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
   const rawProfilesDir = config.get<string>("profilesDir", "") || undefined;
   const profilesDir = resolveWorkspacePath(rawProfilesDir, wsRoot);
   const target = config.get<Record<string, string>>("target", {})[projectName];

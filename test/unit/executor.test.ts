@@ -1,9 +1,16 @@
 /**
- * Unit tests for buildDbtCommand (pure function — no vscode dependency).
+ * Unit tests for buildDbtCommand and resolveDbtExecutable (pure functions — no vscode dependency).
  */
 
 import * as assert from "assert";
-import { buildDbtCommand, DbtCommandOptions } from "../../src/core/executor";
+import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
+import {
+  buildDbtCommand,
+  DbtCommandOptions,
+  resolveDbtExecutable,
+} from "../../src/core/executor";
 
 describe("buildDbtCommand", () => {
   it("builds a basic run command with selector and project dir", () => {
@@ -151,5 +158,60 @@ describe("buildDbtCommand", () => {
       cmd.includes("--no-partial-parse"),
       `Expected extra args in: ${cmd}`,
     );
+  });
+});
+
+describe("resolveDbtExecutable", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dbt-test-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns venv dbt path when .venv/bin/dbt exists and dbtCommand is default", () => {
+    const venvBin = path.join(tmpDir, ".venv", "bin");
+    fs.mkdirSync(venvBin, { recursive: true });
+    fs.writeFileSync(path.join(venvBin, "dbt"), "", { mode: 0o755 });
+
+    const result = resolveDbtExecutable("dbt", tmpDir);
+    assert.strictEqual(result, path.join(venvBin, "dbt"));
+  });
+
+  it("returns original dbtCommand when explicitly set to non-default", () => {
+    const venvBin = path.join(tmpDir, ".venv", "bin");
+    fs.mkdirSync(venvBin, { recursive: true });
+    fs.writeFileSync(path.join(venvBin, "dbt"), "", { mode: 0o755 });
+
+    const result = resolveDbtExecutable("uv run dbt", tmpDir);
+    assert.strictEqual(result, "uv run dbt");
+  });
+
+  it("returns 'dbt' unchanged when no venv exists", () => {
+    const result = resolveDbtExecutable("dbt", tmpDir);
+    assert.strictEqual(result, "dbt");
+  });
+
+  it("checks VIRTUAL_ENV env var as fallback", () => {
+    const venvDir = path.join(tmpDir, "custom-venv");
+    const venvBin = path.join(venvDir, "bin");
+    fs.mkdirSync(venvBin, { recursive: true });
+    fs.writeFileSync(path.join(venvBin, "dbt"), "", { mode: 0o755 });
+
+    const originalEnv = process.env["VIRTUAL_ENV"];
+    process.env["VIRTUAL_ENV"] = venvDir;
+    try {
+      const result = resolveDbtExecutable("dbt", tmpDir);
+      assert.strictEqual(result, path.join(venvBin, "dbt"));
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env["VIRTUAL_ENV"];
+      } else {
+        process.env["VIRTUAL_ENV"] = originalEnv;
+      }
+    }
   });
 });
