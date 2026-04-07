@@ -263,8 +263,10 @@ function App() {
             const children = dir === "upstream" ? t.upstream : t.downstream;
             for (const childId of children) {
               idsToRemove.add(childId);
-              // Also collect any expansions from this child in both directions
+              // Read before deleting so we can recurse into grandchildren
               const childTracked = expandChildrenRef.current.get(childId);
+              expandedRef.current.delete(childId);
+              expandChildrenRef.current.delete(childId);
               if (childTracked) {
                 for (const grandId of childTracked.upstream) {
                   idsToRemove.add(grandId);
@@ -274,9 +276,7 @@ function App() {
                   idsToRemove.add(grandId);
                   collectDescendants(grandId, "downstream");
                 }
-                expandChildrenRef.current.delete(childId);
               }
-              expandedRef.current.delete(childId);
             }
           };
           collectDescendants(collapseNodeId, direction);
