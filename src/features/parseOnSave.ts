@@ -114,16 +114,13 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
   if (hasOpenCompiledDoc) {
     // Cancel any in-flight parse first — parse and compile both write to
     // manifest.json and must never run concurrently.
-    const existingParse = _runningParses.get(project.name);
-    if (existingParse && !existingParse.killed) {
-      try {
-        existingParse.kill("SIGINT");
-      } catch {
-        // Process may have already exited; ignore.
-      }
-      _runningParses.delete(project.name);
-    }
-    spawnCompileDirect(modelName, dbtCommand, project.rootPath, profilesDir);
+    spawnCompileDirect(
+      modelName,
+      dbtCommand,
+      project.rootPath,
+      profilesDir,
+      project.name,
+    );
     return;
   }
 
@@ -263,15 +260,15 @@ function spawnCompileDirect(
   dbtCommand: string,
   projectRoot: string,
   profilesDir: string,
+  projectName: string,
 ): void {
-  // Cancel every running parse — compile and parse must not overlap.
-  for (const [projectName, child] of _runningParses) {
-    if (!child.killed) {
-      try {
-        child.kill("SIGINT");
-      } catch {
-        // Process may have already exited; ignore.
-      }
+  // Cancel running parse for THIS project only — compile and parse must not overlap.
+  const existingParse = _runningParses.get(projectName);
+  if (existingParse && !existingParse.killed) {
+    try {
+      existingParse.kill("SIGINT");
+    } catch {
+      // Process may have already exited; ignore.
     }
     _runningParses.delete(projectName);
   }

@@ -68,9 +68,11 @@ export function layoutExpand(
     newNodes.length * NODE_HEIGHT + (newNodes.length - 1) * NODE_GAP;
   const startY = parentY + NODE_HEIGHT / 2 - totalHeight / 2;
 
-  const allExisting = existingNodes;
-  const minDepth = Math.min(
-    ...allExisting.map((n) => (n.data as GraphNodeData)?.depth ?? 0),
+  const oldMinDepth = Math.min(
+    ...existingNodes.map((n) => (n.data as GraphNodeData)?.depth ?? 0),
+  );
+  const newMinDepth = Math.min(
+    oldMinDepth,
     ...newNodes.map((n) => (n.data as GraphNodeData)?.depth ?? parentDepth + 1),
   );
 
@@ -79,13 +81,25 @@ export function layoutExpand(
     return {
       ...node,
       position: {
-        x: (depth - minDepth) * COL_WIDTH,
+        x: (depth - newMinDepth) * COL_WIDTH,
         y: startY + i * (NODE_HEIGHT + NODE_GAP),
       },
     };
   });
 
-  return resolveCollisions([...existingNodes, ...positioned]);
+  // If minDepth changed (upstream expansion), recompute x for existing nodes too.
+  const reposExisting =
+    newMinDepth !== oldMinDepth
+      ? existingNodes.map((n) => {
+          const depth = (n.data as GraphNodeData)?.depth ?? 0;
+          return {
+            ...n,
+            position: { ...n.position, x: (depth - newMinDepth) * COL_WIDTH },
+          };
+        })
+      : existingNodes;
+
+  return resolveCollisions([...reposExisting, ...positioned]);
 }
 
 /**

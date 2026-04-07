@@ -94,13 +94,13 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     });
 
     // Send initial graph data for whatever file is currently open.
-    // Use resetCenter (bypasses lock) since lock defaults to on.
+    // Use resetCenter (bypasses lock) since this is the initial load.
     this._sendResetCenter();
   }
 
   /**
-   * Updates the lineage graph for the currently active editor.
-   * Called on editor focus change and manifest reload.
+   * Highlights the node for the active editor without rebuilding the graph.
+   * Called on editor focus change. Sends empty state when no dbt model is active.
    */
   async updateCenter(): Promise<void> {
     if (!this._view) {
@@ -110,8 +110,11 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const project = getActiveProject();
     if (!project) {
       this._postMessage({
-        type: "highlightCenter",
+        type: "resetCenter",
+        nodes: [],
+        edges: [],
         currentNodeId: null,
+        emptyMessage: "No active dbt project",
       });
       return;
     }
@@ -119,10 +122,29 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     await project.ensureLoaded();
 
     const nodeId = this._getActiveNodeId(project);
+    if (!nodeId) {
+      this._postMessage({
+        type: "resetCenter",
+        nodes: [],
+        edges: [],
+        currentNodeId: null,
+        emptyMessage: "No dbt model found for this file",
+      });
+      return;
+    }
+
     this._postMessage({
       type: "highlightCenter",
       currentNodeId: nodeId,
     });
+  }
+
+  /**
+   * Rebuilds the lineage graph with fresh manifest data.
+   * Called on manifest reload — not on editor focus change.
+   */
+  async refreshGraph(): Promise<void> {
+    await this._sendResetCenter();
   }
 
   /**
@@ -171,6 +193,11 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (!this._ready) {
+      // Don't let a highlight-only message overwrite a pending graph message.
+      const msg = message as { type?: string };
+      if (msg.type === "highlightCenter" && this._pendingMessage) {
+        return;
+      }
       this._pendingMessage = message;
       return;
     }

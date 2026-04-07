@@ -238,11 +238,31 @@ function App() {
           const direction: string = msg.direction;
           if (!collapseNodeId || !direction) break;
 
-          const tracked = expandChildrenRef.current.get(collapseNodeId);
-          const idsToRemove =
-            direction === "upstream"
-              ? tracked?.upstream ?? new Set()
-              : tracked?.downstream ?? new Set();
+          // Recursively collect all nodes to remove (handles grandchildren).
+          const idsToRemove = new Set<string>();
+          const collectDescendants = (nodeId: string, dir: string) => {
+            const t = expandChildrenRef.current.get(nodeId);
+            if (!t) return;
+            const children = dir === "upstream" ? t.upstream : t.downstream;
+            for (const childId of children) {
+              idsToRemove.add(childId);
+              // Also collect any expansions from this child in both directions
+              const childTracked = expandChildrenRef.current.get(childId);
+              if (childTracked) {
+                for (const grandId of childTracked.upstream) {
+                  idsToRemove.add(grandId);
+                  collectDescendants(grandId, "upstream");
+                }
+                for (const grandId of childTracked.downstream) {
+                  idsToRemove.add(grandId);
+                  collectDescendants(grandId, "downstream");
+                }
+                expandChildrenRef.current.delete(childId);
+              }
+              expandedRef.current.delete(childId);
+            }
+          };
+          collectDescendants(collapseNodeId, direction);
 
           const prevExpanded = expandedRef.current.get(collapseNodeId) ?? {
             upstream: false,
@@ -253,6 +273,7 @@ function App() {
             [direction]: false,
           });
 
+          const tracked = expandChildrenRef.current.get(collapseNodeId);
           if (tracked) {
             if (direction === "upstream") tracked.upstream.clear();
             else tracked.downstream.clear();
