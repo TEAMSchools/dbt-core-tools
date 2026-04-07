@@ -14,6 +14,8 @@ v0.0.4 feedback spec: `docs/specs/2026-04-05-v0.0.4-feedback-design.md`
 v0.0.4 feedback plan: `docs/plans/2026-04-05-v0.0.4-feedback.md`
 v0.0.5 feedback spec: `docs/specs/2026-04-06-v0.0.5-feedback-design.md`
 v0.0.5 feedback plan: `docs/plans/2026-04-06-v0.0.5-feedback.md`
+v0.0.8 feedback spec: `docs/specs/2026-04-07-v0.0.8-feedback-design.md`
+v0.0.8 feedback plan: `docs/plans/2026-04-07-v0.0.8-feedback.md`
 
 ## Build & Test Commands
 
@@ -61,7 +63,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - TypeScript strict mode enabled
 - Zero runtime dependencies — everything bundled via esbuild
 - `vscode` module is external (provided by VS Code runtime)
-- Preview webview uses plain HTML/JS; lineage webview uses React Flow (`@xyflow/react`) + dagre, bundled by esbuild to `dist/lineage.js`
+- Preview webview uses plain HTML/JS; lineage webview uses React Flow (`@xyflow/react`) with custom layout engine (no dagre), bundled by esbuild to `dist/lineage.js`
 - Extension depends on `redhat.vscode-yaml` for YAML schema validation
 - Extension depends on `samuelcolvin.jinjahtml` for Jinja-SQL syntax highlighting
 - Settings are namespaced under `dbtCoreTools.*`
@@ -70,7 +72,10 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` statically imports from `../extension`)
 - Command execution uses VS Code Task API (`ShellExecution` + `onDidEndTaskProcess`) for reliable completion detection — `initExecutor(context)` must be called in `activate()`
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
-- Lineage webview has three message types: `updateCenter` (respects lock toggle), `resetCenter` (bypasses lock, used by reset button), and `mergeGraph` (adds nodes/edges for expand). Lock defaults to on.
+- Lineage webview message types: `highlightCenter` (updates current node highlight + recenters viewport, respects lock), `resetCenter` (full graph rebuild, only from Reset button/right-click), `mergeGraph` (adds nodes for expand), `collapseDirection` (removes nodes from a specific expansion). Lock defaults to off.
+- Target selection is stored in-memory (not workspace settings) — resets on window reload. Use `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
+- Lineage uses custom layout engine (`layout.ts`) — exports `layoutGraph` (initial), `layoutExpand` (incremental), `resolveCollisions` (collision resolution). No dagre dependency.
+- When compiled SQL panel is open, parse-on-save skips `dbt parse` and goes straight to `dbt compile` for faster updates
 - Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
