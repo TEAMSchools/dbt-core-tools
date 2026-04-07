@@ -5,6 +5,7 @@
   "version": "0.0.8",
   "publisher": "TEAMSchools",
   "license": "MIT",
+  "icon": "media/dbt-icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/TEAMSchools/dbt-core-tools.git"
