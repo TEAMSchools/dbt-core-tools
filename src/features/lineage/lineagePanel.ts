@@ -25,6 +25,7 @@ export interface GraphNode {
   testCount: number;
   hasUpstream: boolean;
   hasDownstream: boolean;
+  depth: number;
 }
 
 export interface GraphEdge {
@@ -93,13 +94,14 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     });
 
     // Send initial graph data for whatever file is currently open.
-    // Use resetCenter (bypasses lock) since lock defaults to on.
+    // Use resetCenter (bypasses lock) since this is the initial load.
     this._sendResetCenter();
   }
 
   /**
-   * Updates the lineage graph for the currently active editor.
-   * Called on editor focus change and manifest reload.
+   * Highlights the node for the active editor without rebuilding the graph.
+   * Called on editor focus change. Does nothing when the active file isn't a
+   * dbt model — the existing graph stays visible with the last highlight.
    */
   async updateCenter(): Promise<void> {
     if (!this._view) {
@@ -107,38 +109,25 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     }
 
     const project = getActiveProject();
-    if (!project) {
-      this._postMessage({
-        type: "updateCenter",
-        nodes: [],
-        edges: [],
-        currentNodeId: null,
-        emptyMessage: "No active dbt project",
-      });
-      return;
-    }
+    if (!project) return;
 
     await project.ensureLoaded();
 
     const nodeId = this._getActiveNodeId(project);
-    if (!nodeId) {
-      this._postMessage({
-        type: "updateCenter",
-        nodes: [],
-        edges: [],
-        currentNodeId: null,
-        emptyMessage: "No dbt model found for this file",
-      });
-      return;
-    }
+    if (!nodeId) return;
 
-    const graphData = buildGraphData(project, nodeId, 1);
     this._postMessage({
-      type: "updateCenter",
-      nodes: graphData.nodes,
-      edges: graphData.edges,
+      type: "highlightCenter",
       currentNodeId: nodeId,
     });
+  }
+
+  /**
+   * Rebuilds the lineage graph with fresh manifest data.
+   * Called on manifest reload — not on editor focus change.
+   */
+  async refreshGraph(): Promise<void> {
+    await this._sendResetCenter();
   }
 
   /**
@@ -187,6 +176,17 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (!this._ready) {
+      // Don't let a lightweight message overwrite a pending graph-carrying message.
+      if (this._pendingMessage) {
+        const pending = this._pendingMessage as { type?: string };
+        const incoming = message as { type?: string };
+        if (
+          pending.type === "resetCenter" &&
+          incoming.type === "highlightCenter"
+        ) {
+          return;
+        }
+      }
       this._pendingMessage = message;
       return;
     }
@@ -240,9 +240,13 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
         });
         break;
       }
-      case "collapse": {
-        // Rebuild graph from current center at base depth, clearing expanded state
-        await this._sendResetCenter();
+      case "collapseDirection": {
+        if (!nodeId || !message.direction) return;
+        this._postMessage({
+          type: "collapseDirection",
+          nodeId,
+          direction: message.direction,
+        });
         break;
       }
       case "runModel":
@@ -335,41 +339,45 @@ export function buildGraphData(
   }
 
   const visitedNodes = new Set<string>();
+  const nodeDepths = new Map<string, number>();
   const edges: GraphEdge[] = [];
 
   function isTest(id: string): boolean {
     return id.startsWith("test.");
   }
 
-  function expandUpstream(id: string, remainingDepth: number): void {
+  function expandUpstream(id: string, remainingDepth: number, depth: number): void {
     if (remainingDepth <= 0) return;
     const parents = parentMap[id] ?? [];
     for (const parentId of parents) {
       if (isTest(parentId)) continue;
       if (!visitedNodes.has(parentId)) {
         visitedNodes.add(parentId);
-        expandUpstream(parentId, remainingDepth - 1);
+        nodeDepths.set(parentId, depth - 1);
+        expandUpstream(parentId, remainingDepth - 1, depth - 1);
       }
       edges.push({ source: parentId, target: id });
     }
   }
 
-  function expandDownstream(id: string, remainingDepth: number): void {
+  function expandDownstream(id: string, remainingDepth: number, depth: number): void {
     if (remainingDepth <= 0) return;
     const children = supplementedChildMap[id] ?? [];
     for (const childId of children) {
       if (isTest(childId)) continue;
       if (!visitedNodes.has(childId)) {
         visitedNodes.add(childId);
-        expandDownstream(childId, remainingDepth - 1);
+        nodeDepths.set(childId, depth + 1);
+        expandDownstream(childId, remainingDepth - 1, depth + 1);
       }
       edges.push({ source: id, target: childId });
     }
   }
 
   visitedNodes.add(centerId);
-  expandUpstream(centerId, depth);
-  expandDownstream(centerId, depth);
+  nodeDepths.set(centerId, 0);
+  expandUpstream(centerId, depth, 0);
+  expandDownstream(centerId, depth, 0);
 
   const edgeSet = new Set<string>();
   const uniqueEdges: GraphEdge[] = [];
@@ -410,6 +418,7 @@ export function buildGraphData(
         testCount: tc,
         hasUpstream: parents.length > 0,
         hasDownstream: children.length > 0,
+        depth: nodeDepths.get(id) ?? 0,
       });
       continue;
     }
@@ -428,6 +437,7 @@ export function buildGraphData(
         testCount: tc,
         hasUpstream: parents.length > 0,
         hasDownstream: children.length > 0,
+        depth: nodeDepths.get(id) ?? 0,
       });
       continue;
     }
@@ -444,6 +454,7 @@ export function buildGraphData(
       testCount: tc,
       hasUpstream: parents.length > 0,
       hasDownstream: children.length > 0,
+      depth: nodeDepths.get(id) ?? 0,
     });
   }
 

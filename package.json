@@ -5,6 +5,7 @@
   "version": "0.0.8",
   "publisher": "TEAMSchools",
   "license": "MIT",
+  "icon": "media/dbt-icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/TEAMSchools/dbt-core-tools.git"
@@ -224,11 +225,6 @@
           "default": "",
           "description": "Path to profiles directory"
         },
-        "dbtCoreTools.target": {
-          "type": "object",
-          "default": {},
-          "description": "Per-project target (key: project name, value: target)"
-        },
         "dbtCoreTools.parseOnSave": {
           "type": "boolean",
           "default": true,
@@ -298,7 +294,7 @@
     "publish": "npx @vscode/vsce publish"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^3.0.0",
+    "@vscode/codicons": "^0.0.45",
     "@xyflow/react": "^12.10.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

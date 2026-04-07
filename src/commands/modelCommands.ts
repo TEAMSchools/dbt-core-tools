@@ -13,6 +13,7 @@ import {
 } from "../core/executor";
 import { getActiveProject, getDeferToggle } from "../extension";
 import { buildSelector, showOptionsPicker } from "./optionsPicker";
+import { getSelectedTarget } from "../statusbar/targetSelector";
 
 // ---------------------------------------------------------------------------
 // Preview provider (set during activation)
@@ -88,7 +89,7 @@ export function getCommandOptions(projectName: string): {
   const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
   const rawProfilesDir = config.get<string>("profilesDir", "") || undefined;
   const profilesDir = resolveWorkspacePath(rawProfilesDir, wsRoot);
-  const target = config.get<Record<string, string>>("target", {})[projectName];
+  const target = getSelectedTarget(projectName);
 
   // Only include deferState when the toggle is actually on.
   let deferState: string | undefined;

@@ -26,6 +26,7 @@ async function main() {
     sourcemap: !production,
     minify: production,
     jsx: "automatic",
+    loader: { ".ttf": "file" },
     define: {
       "process.env.NODE_ENV": production ? '"production"' : '"development"',
     },

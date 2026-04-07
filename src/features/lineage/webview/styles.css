@@ -1,4 +1,4 @@
-/* dbt Core Tools — Lineage Viewer styles (React Flow) */
+/* dbt Core Tools — Lineage Viewer styles (dark theme) */
 
 * {
   box-sizing: border-box;
@@ -12,10 +12,10 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--vscode-editor-background);
-  color: var(--vscode-foreground);
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  font-family: var(--vscode-font-family, system-ui);
+  font-size: var(--vscode-font-size, 13px);
 }
 
 /* ---- Toolbar ---- */
@@ -28,11 +28,8 @@ body,
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: var(
-    --vscode-editorWidget-background,
-    var(--vscode-editor-background)
-  );
-  border: 1px solid var(--vscode-panel-border);
+  background-color: rgba(26, 26, 46, 0.9);
+  border: 1px solid #333;
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 0.85em;
@@ -44,11 +41,12 @@ body,
   gap: 5px;
   cursor: pointer;
   user-select: none;
+  color: #aaa;
 }
 
 .reset-btn {
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
   border: none;
   border-radius: 3px;
   padding: 2px 8px;
@@ -57,11 +55,11 @@ body,
 }
 
 .reset-btn:hover {
-  background: var(--vscode-button-hoverBackground);
+  background: var(--vscode-button-hoverBackground, #1177bb);
 }
 
 .center-label {
-  color: var(--vscode-descriptionForeground);
+  color: #888;
   font-size: 0.9em;
   max-width: 200px;
   overflow: hidden;
@@ -73,48 +71,61 @@ body,
 
 .dbt-node {
   position: relative;
-  font-family: var(--vscode-font-family);
+  font-family: var(--vscode-font-family, system-ui);
+  width: 160px;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  cursor: pointer;
 }
 
 .dbt-node.current {
-  box-shadow: 0 0 8px var(--vscode-focusBorder, #007acc);
+  box-shadow: 0 0 8px rgba(100, 181, 246, 0.3);
 }
 
 .node-name {
   font-size: 12px;
-  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+  font-weight: 600;
+  color: #e0e0e0;
   text-align: center;
   white-space: nowrap;
 }
 
 .node-mat {
   font-size: 10px;
-  color: var(--vscode-descriptionForeground);
+  color: #888;
   text-align: center;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
-.node-badge {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 11px;
-}
+/* ---- Badges ---- */
 
-.test-badge {
-  position: absolute;
-  bottom: 2px;
-  left: 8px;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--vscode-terminal-ansiBrightYellow, #e6e6a8);
-  background: rgba(230, 230, 168, 0.25);
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
+.node-badges {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.node-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 9px;
+  height: 16px;
+  line-height: 16px;
+}
+
+.node-pill .codicon {
+  font-size: 10px;
 }
 
 /* ---- Expand buttons ---- */
@@ -126,9 +137,9 @@ body,
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1.5px solid var(--vscode-button-background);
-  background: var(--vscode-editor-background);
-  color: var(--vscode-button-background);
+  border: 1.5px solid var(--vscode-button-background, #0e639c);
+  background: #1a1a2e;
+  color: var(--vscode-button-background, #0e639c);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -143,8 +154,8 @@ body,
 
 .expand-btn:hover {
   opacity: 1;
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
 }
 
 .expand-btn-left {
@@ -160,15 +171,12 @@ body,
 .context-menu {
   position: fixed;
   z-index: 100;
-  background-color: var(
-    --vscode-menu-background,
-    var(--vscode-editorWidget-background)
-  );
-  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  background-color: #252536;
+  border: 1px solid #444;
   border-radius: 4px;
   padding: 4px 0;
   min-width: 160px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .context-menu ul {
@@ -180,22 +188,17 @@ body,
 .context-menu li {
   padding: 5px 14px;
   cursor: pointer;
-  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  color: #e0e0e0;
   font-size: 0.9em;
   white-space: nowrap;
 }
 
 .context-menu li:hover {
-  background-color: var(
-    --vscode-menu-selectionBackground,
-    var(--vscode-list-hoverBackground)
-  );
-  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+  background-color: rgba(100, 181, 246, 0.15);
 }
 
 .context-menu li.separator {
-  border-top: 1px solid
-    var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
+  border-top: 1px solid #444;
   margin: 3px 0;
   padding: 0;
   cursor: default;
@@ -213,25 +216,25 @@ body,
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: var(--vscode-descriptionForeground);
+  color: #888;
 }
 
 /* ---- React Flow overrides ---- */
 
 .react-flow__background {
-  background-color: var(--vscode-editor-background) !important;
+  background-color: #1a1a2e !important;
 }
 
 .react-flow__controls button {
-  background-color: var(--vscode-button-background) !important;
-  color: var(--vscode-button-foreground) !important;
-  border: 1px solid var(--vscode-panel-border) !important;
+  background-color: #252536 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #444 !important;
 }
 
 .react-flow__controls button:hover {
-  background-color: var(--vscode-button-hoverBackground) !important;
+  background-color: #333 !important;
 }
 
 .react-flow__controls button svg {
-  fill: var(--vscode-button-foreground) !important;
+  fill: #e0e0e0 !important;
 }

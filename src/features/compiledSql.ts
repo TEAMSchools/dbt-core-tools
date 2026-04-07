@@ -141,23 +141,14 @@ export async function showCompiledSql(
     const manifestStatus = getManifestStatus();
     manifestStatus?.setRunning(`compiling ${modelName}`);
 
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: `dbt Core Tools: Compiling ${modelName}...`,
-        cancellable: false,
-      },
-      async () => {
-        await waitForParse(project.name);
-        const result = await executeAndCapture(compileCmd, project.rootPath);
-        if (result.exitCode !== 0) {
-          getOutputChannel().appendLine(
-            `[error] dbt compile failed for ${modelName}: ${result.stderr || result.stdout}`,
-          );
-        }
-        await project.reloadManifest();
-      },
-    );
+    await waitForParse(project.name);
+    const result = await executeAndCapture(compileCmd, project.rootPath);
+    if (result.exitCode !== 0) {
+      getOutputChannel().appendLine(
+        `[error] dbt compile failed for ${modelName}: ${result.stderr || result.stdout}`,
+      );
+    }
+    await project.reloadManifest();
 
     await manifestStatus?.clearRunning(project);
     provider.fireChange(uri);

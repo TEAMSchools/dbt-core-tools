@@ -91,6 +91,39 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     return;
   }
 
+  // Build command options (needed for both fast-path and normal parse path).
+  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
+  const rawProfilesDir = config.get<string>("profilesDir", "");
+  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
+  const profilesDir =
+    resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
+
+  // Fast path: if a compiled SQL doc is open for this model, skip parse and
+  // go straight to compile (saves one full process startup on every save).
+  const fileName = filePath.split(/[\\/]/).pop() ?? "";
+  const modelName = fileName.replace(/\.sql$/i, "");
+  const hasOpenCompiledDoc =
+    !!modelName &&
+    vscode.workspace.textDocuments.some(
+      (doc) =>
+        doc.uri.scheme === "dbt-compiled" &&
+        new URLSearchParams(doc.uri.query).get("model") === modelName,
+    );
+
+  if (hasOpenCompiledDoc) {
+    // Cancel any in-flight parse first — parse and compile both write to
+    // manifest.json and must never run concurrently.
+    spawnCompileDirect(
+      modelName,
+      dbtCommand,
+      project.rootPath,
+      profilesDir,
+      project.name,
+    );
+    return;
+  }
+
   // Cancel any in-flight parse for this project.
   const existing = _runningParses.get(project.name);
   if (existing && !existing.killed) {
@@ -101,14 +134,6 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     }
     _runningParses.delete(project.name);
   }
-
-  // Build the parse command.
-  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
-  const rawProfilesDir = config.get<string>("profilesDir", "");
-  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
-  const profilesDir =
-    resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
 
   const cmd = buildDbtCommand({
     dbtCommand,
@@ -200,6 +225,75 @@ function spawnCompileIfNeeded(
     } catch {
       // Process may have already exited; ignore.
     }
+  }
+
+  const compileChild = spawn(compileExe, compileArgs, {
+    cwd: projectRoot,
+    stdio: "ignore",
+    detached: false,
+  });
+  _runningCompiles.set(modelName, compileChild);
+
+  compileChild.on("close", () => {
+    if (_runningCompiles.get(modelName) === compileChild) {
+      _runningCompiles.delete(modelName);
+    }
+  });
+  compileChild.on("error", () => {
+    if (_runningCompiles.get(modelName) === compileChild) {
+      _runningCompiles.delete(modelName);
+    }
+  });
+}
+
+/**
+ * Directly spawn `dbt compile -s <modelName>` without waiting for parse first.
+ * Used by the fast path in `handleSave()` when a compiled SQL doc is already
+ * open — skips the parse step entirely to reduce latency on each save.
+ *
+ * IMPORTANT: cancel any in-flight parse for the current project before spawning,
+ * because parse and compile both write to manifest.json and must never run
+ * concurrently.
+ */
+function spawnCompileDirect(
+  modelName: string,
+  dbtCommand: string,
+  projectRoot: string,
+  profilesDir: string,
+  projectName: string,
+): void {
+  // Cancel running parse for THIS project only — compile and parse must not overlap.
+  const existingParse = _runningParses.get(projectName);
+  if (existingParse && !existingParse.killed) {
+    try {
+      existingParse.kill("SIGINT");
+    } catch {
+      // Process may have already exited; ignore.
+    }
+    _runningParses.delete(projectName);
+  }
+
+  // Cancel any in-flight compile for this model.
+  const existingCompile = _runningCompiles.get(modelName);
+  if (existingCompile && !existingCompile.killed) {
+    try {
+      existingCompile.kill("SIGINT");
+    } catch {
+      // Process may have already exited; ignore.
+    }
+  }
+
+  const compileCmd = buildDbtCommand({
+    dbtCommand,
+    subcommand: "compile",
+    projectDir: projectRoot,
+    selector: modelName,
+    profilesDir: profilesDir || undefined,
+  });
+
+  const [compileExe, ...compileArgs] = splitCommand(compileCmd);
+  if (!compileExe) {
+    return;
   }
 
   const compileChild = spawn(compileExe, compileArgs, {

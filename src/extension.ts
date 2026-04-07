@@ -228,7 +228,7 @@ export async function activate(
           compiledSqlProvider.fireChange(doc.uri);
         }
       }
-      lineageProvider.updateCenter();
+      lineageProvider.refreshGraph();
     });
     context.subscriptions.push({ dispose: disposer });
   }
