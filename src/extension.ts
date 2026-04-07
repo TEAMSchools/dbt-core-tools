@@ -124,11 +124,13 @@ export async function activate(
   await updateContextKeys(vscode.window.activeTextEditor);
 
   // React to editor focus changes.
+  let lineageDebounce: ReturnType<typeof setTimeout> | undefined;
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
       await updateContextKeys(editor);
       await updateStatusBar();
-      await lineageProvider.updateCenter();
+      clearTimeout(lineageDebounce);
+      lineageDebounce = setTimeout(() => lineageProvider.updateCenter(), 150);
     }),
   );
 
