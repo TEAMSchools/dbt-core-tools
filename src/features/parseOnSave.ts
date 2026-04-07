@@ -251,7 +251,7 @@ function spawnCompileIfNeeded(
  * Used by the fast path in `handleSave()` when a compiled SQL doc is already
  * open — skips the parse step entirely to reduce latency on each save.
  *
- * IMPORTANT: cancel any in-flight parse for ALL projects before spawning,
+ * IMPORTANT: cancel any in-flight parse for the current project before spawning,
  * because parse and compile both write to manifest.json and must never run
  * concurrently.
  */

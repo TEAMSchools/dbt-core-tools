@@ -224,11 +224,28 @@ function App() {
             const newFlowEdges = buildFlowEdges(filteredNewEdges);
             setEdges([...currentEdges, ...newFlowEdges]);
 
-            return layoutExpand(
+            const laid = layoutExpand(
               prev,
               newFlowNodes,
               msg.expandedNodeId ?? "",
             );
+
+            // Update the parent node's expanded flag so its button flips to −
+            if (msg.expandedNodeId && msg.expandedDirection) {
+              const prop =
+                msg.expandedDirection === "upstream"
+                  ? "expandedUpstream"
+                  : "expandedDownstream";
+              return laid.map((n) =>
+                n.id === msg.expandedNodeId
+                  ? {
+                      ...n,
+                      data: { ...n.data, [prop]: true } as GraphNodeData,
+                    }
+                  : n,
+              );
+            }
+            return laid;
           });
           break;
         }

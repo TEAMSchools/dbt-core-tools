@@ -100,7 +100,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
 
   /**
    * Highlights the node for the active editor without rebuilding the graph.
-   * Called on editor focus change. Sends empty state when no dbt model is active.
+   * Called on editor focus change. Does nothing when the active file isn't a
+   * dbt model — the existing graph stays visible with the last highlight.
    */
   async updateCenter(): Promise<void> {
     if (!this._view) {
@@ -108,30 +109,12 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     }
 
     const project = getActiveProject();
-    if (!project) {
-      this._postMessage({
-        type: "resetCenter",
-        nodes: [],
-        edges: [],
-        currentNodeId: null,
-        emptyMessage: "No active dbt project",
-      });
-      return;
-    }
+    if (!project) return;
 
     await project.ensureLoaded();
 
     const nodeId = this._getActiveNodeId(project);
-    if (!nodeId) {
-      this._postMessage({
-        type: "resetCenter",
-        nodes: [],
-        edges: [],
-        currentNodeId: null,
-        emptyMessage: "No dbt model found for this file",
-      });
-      return;
-    }
+    if (!nodeId) return;
 
     this._postMessage({
       type: "highlightCenter",
@@ -193,10 +176,16 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (!this._ready) {
-      // Don't let a highlight-only message overwrite a pending graph message.
-      const msg = message as { type?: string };
-      if (msg.type === "highlightCenter" && this._pendingMessage) {
-        return;
+      // Don't let a lightweight message overwrite a pending graph-carrying message.
+      if (this._pendingMessage) {
+        const pending = this._pendingMessage as { type?: string };
+        const incoming = message as { type?: string };
+        if (
+          pending.type === "resetCenter" &&
+          incoming.type === "highlightCenter"
+        ) {
+          return;
+        }
       }
       this._pendingMessage = message;
       return;
