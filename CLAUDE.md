@@ -51,11 +51,12 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 ### Lineage Viewer
 
-- Message protocol: `highlightCenter` (highlight + recenter, respects lock), `resetCenter` (full rebuild — Reset button, right-click, or `refreshGraph()`), `mergeGraph` (expand), `collapseDirection` (targeted removal). Lock defaults off.
-- `updateCenter()` only sends `highlightCenter` or does nothing (non-dbt files) — must NEVER send `resetCenter` or expanded state is destroyed
-- `mergeGraph` must update parent node's `data.expandedUpstream`/`expandedDownstream` in addition to `expandedRef` — otherwise buttons don't flip
-- Collapse must cascade: `collectDescendants` recursively removes grandchildren, cleans up both `expandedRef` and `expandChildrenRef` (read before delete)
-- `layoutExpand` must recalculate all x-positions when upstream expansion changes `minDepth`
+- Stateless graph: every update is a full `resetCenter` rebuild — no incremental state
+- Message protocol: `resetCenter` (extension→webview, full rebuild), `changeView` (webview→extension, mode/depth change)
+- View modes: `nn` (upstream+downstream), `upstream`, `downstream` with configurable depth
+- Dagre layout via `@dagrejs/dagre` — single `layoutGraph` function, no incremental layout
+- Editor changes debounced (150ms) before triggering `updateCenter`
+- `ViewMode` type is defined separately in `lineagePanel.ts` and `webview/types.ts` — keep in sync
 - Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
 - Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
 - Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`

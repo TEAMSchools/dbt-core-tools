@@ -87,8 +87,10 @@ function App() {
       );
       setNodes(positioned);
       setEdges(layoutEdges);
+      // fitView prop only fires on mount; re-center after data changes
+      requestAnimationFrame(() => fitView({ duration: 300 }));
     },
-    [setNodes, setEdges],
+    [setNodes, setEdges, fitView],
   );
 
   // Message handler from extension host
