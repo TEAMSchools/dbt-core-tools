@@ -39,7 +39,7 @@ interface IncomingEdge {
 }
 
 const VIEW_MODE_LABELS: Record<ViewMode, string> = {
-  nn: "NN",
+  nn: "Nearest",
   upstream: "Upstream",
   downstream: "Downstream",
 };
