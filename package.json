@@ -224,11 +224,6 @@
           "default": "",
           "description": "Path to profiles directory"
         },
-        "dbtCoreTools.target": {
-          "type": "object",
-          "default": {},
-          "description": "Per-project target (key: project name, value: target)"
-        },
         "dbtCoreTools.parseOnSave": {
           "type": "boolean",
           "default": true,

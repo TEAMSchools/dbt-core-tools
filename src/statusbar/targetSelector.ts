@@ -10,6 +10,29 @@ import { DbtProject } from "../core/project";
 import { parseProfileTargets } from "../core/profiles";
 import { resolveWorkspacePath } from "../commands/modelCommands";
 
+// ---------------------------------------------------------------------------
+// In-memory target storage (resets on window reload)
+// ---------------------------------------------------------------------------
+
+const _selectedTargets = new Map<string, string>();
+
+/** Returns the in-memory selected target for a project, or undefined if unset. */
+export function getSelectedTarget(projectName: string): string | undefined {
+  return _selectedTargets.get(projectName);
+}
+
+/** Sets (or clears when undefined) the in-memory target for a project. */
+export function setSelectedTarget(
+  projectName: string,
+  target: string | undefined,
+): void {
+  if (target === undefined) {
+    _selectedTargets.delete(projectName);
+  } else {
+    _selectedTargets.set(projectName, target);
+  }
+}
+
 export class TargetSelector {
   private readonly _item: vscode.StatusBarItem;
 
@@ -29,17 +52,15 @@ export class TargetSelector {
       return;
     }
 
-    const config = vscode.workspace.getConfiguration("dbtCoreTools");
-    const targetMap = config.get<Record<string, string>>("target", {});
-    const target = targetMap[project.name] ?? "default";
+    const target = getSelectedTarget(project.name) ?? "default";
 
     this._item.text = `${project.name} | dbt: ${target}`;
     this._item.show();
   }
 
   /**
-   * Shows a quick-pick of available targets for the project and persists
-   * the selection to `dbtCoreTools.target` in workspace settings.
+   * Shows a quick-pick of available targets for the project and stores
+   * the selection in memory (resets on window reload).
    */
   async selectTarget(project: DbtProject | null): Promise<void> {
     if (!project) {
@@ -84,14 +105,7 @@ export class TargetSelector {
       return;
     }
 
-    // Merge the selection into the existing target map.
-    const existing = config.get<Record<string, string>>("target", {});
-    await config.update(
-      "target",
-      { ...existing, [project.name]: picked.label },
-      vscode.ConfigurationTarget.Workspace,
-    );
-
+    setSelectedTarget(project.name, picked.label);
     this.update(project);
   }
 
