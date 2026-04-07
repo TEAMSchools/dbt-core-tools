@@ -110,11 +110,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     const project = getActiveProject();
     if (!project) {
       this._postMessage({
-        type: "updateCenter",
-        nodes: [],
-        edges: [],
+        type: "highlightCenter",
         currentNodeId: null,
-        emptyMessage: "No active dbt project",
       });
       return;
     }
@@ -122,22 +119,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
     await project.ensureLoaded();
 
     const nodeId = this._getActiveNodeId(project);
-    if (!nodeId) {
-      this._postMessage({
-        type: "updateCenter",
-        nodes: [],
-        edges: [],
-        currentNodeId: null,
-        emptyMessage: "No dbt model found for this file",
-      });
-      return;
-    }
-
-    const graphData = buildGraphData(project, nodeId, 1);
     this._postMessage({
-      type: "updateCenter",
-      nodes: graphData.nodes,
-      edges: graphData.edges,
+      type: "highlightCenter",
       currentNodeId: nodeId,
     });
   }
@@ -241,9 +224,13 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
         });
         break;
       }
-      case "collapse": {
-        // Rebuild graph from current center at base depth, clearing expanded state
-        await this._sendResetCenter();
+      case "collapseDirection": {
+        if (!nodeId || !message.direction) return;
+        this._postMessage({
+          type: "collapseDirection",
+          nodeId,
+          direction: message.direction,
+        });
         break;
       }
       case "runModel":
