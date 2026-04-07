@@ -154,7 +154,10 @@ function App() {
               if (target) {
                 const x = target.position.x + 80;
                 const y = target.position.y + 32;
-                setTimeout(() => setCenter(x, y, { zoom: 1, duration: 300 }), 50);
+                setTimeout(
+                  () => setCenter(x, y, { zoom: 1, duration: 300 }),
+                  50,
+                );
               }
             }
             return updated;
@@ -197,7 +200,9 @@ function App() {
 
             // Track which new nodes belong to this expansion
             if (msg.expandedNodeId && msg.expandedDirection) {
-              const prev2 = expandChildrenRef.current.get(msg.expandedNodeId) ?? {
+              const prev2 = expandChildrenRef.current.get(
+                msg.expandedNodeId,
+              ) ?? {
                 upstream: new Set<string>(),
                 downstream: new Set<string>(),
               };
@@ -325,7 +330,15 @@ function App() {
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [locked, applyGraph, buildFlowNodes, buildFlowEdges, setNodes, setEdges, setCenter]);
+  }, [
+    locked,
+    applyGraph,
+    buildFlowNodes,
+    buildFlowEdges,
+    setNodes,
+    setEdges,
+    setCenter,
+  ]);
 
   // Context menu from DbtNode custom events
   useEffect(() => {
@@ -400,7 +413,12 @@ function App() {
         proOptions={{ hideAttribution: true }}
       >
         <Controls showInteractive={false} />
-        <Background variant={BackgroundVariant.Dots} color="#333" gap={20} size={1} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          color="#333"
+          gap={20}
+          size={1}
+        />
       </ReactFlow>
       {contextMenu && (
         <div

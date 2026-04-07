@@ -346,7 +346,11 @@ export function buildGraphData(
     return id.startsWith("test.");
   }
 
-  function expandUpstream(id: string, remainingDepth: number, depth: number): void {
+  function expandUpstream(
+    id: string,
+    remainingDepth: number,
+    depth: number,
+  ): void {
     if (remainingDepth <= 0) return;
     const parents = parentMap[id] ?? [];
     for (const parentId of parents) {
@@ -360,7 +364,11 @@ export function buildGraphData(
     }
   }
 
-  function expandDownstream(id: string, remainingDepth: number, depth: number): void {
+  function expandDownstream(
+    id: string,
+    remainingDepth: number,
+    depth: number,
+  ): void {
     if (remainingDepth <= 0) return;
     const children = supplementedChildMap[id] ?? [];
     for (const childId of children) {

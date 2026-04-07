@@ -1,5 +1,10 @@
 import { strict as assert } from "node:assert";
-import { layoutGraph, resolveCollisions, NODE_WIDTH, NODE_HEIGHT } from "../../src/features/lineage/webview/layout";
+import {
+  layoutGraph,
+  resolveCollisions,
+  NODE_WIDTH,
+  NODE_HEIGHT,
+} from "../../src/features/lineage/webview/layout";
 
 function makeNode(id: string, depth = 0, x = 0, y = 0): any {
   return {
@@ -30,7 +35,10 @@ describe("custom layout engine", () => {
       const result = layoutGraph(nodes, edges);
       const aNode = result.nodes.find((n: any) => n.id === "a")!;
       const bNode = result.nodes.find((n: any) => n.id === "b")!;
-      assert.ok(bNode.position.x > aNode.position.x, "downstream node should be to the right");
+      assert.ok(
+        bNode.position.x > aNode.position.x,
+        "downstream node should be to the right",
+      );
     });
 
     it("stacks sibling nodes vertically", () => {
@@ -39,7 +47,10 @@ describe("custom layout engine", () => {
       const result = layoutGraph(nodes, edges);
       const bNode = result.nodes.find((n: any) => n.id === "b")!;
       const cNode = result.nodes.find((n: any) => n.id === "c")!;
-      assert.ok(bNode.position.y !== cNode.position.y, "siblings should have different y");
+      assert.ok(
+        bNode.position.y !== cNode.position.y,
+        "siblings should have different y",
+      );
     });
 
     it("handles upstream nodes with negative depth", () => {
@@ -56,22 +67,19 @@ describe("custom layout engine", () => {
 
   describe("resolveCollisions", () => {
     it("separates overlapping nodes at same x", () => {
-      const nodes = [
-        makeNode("a", 0, 0, 0),
-        makeNode("b", 0, 0, 10),
-      ];
+      const nodes = [makeNode("a", 0, 0, 0), makeNode("b", 0, 0, 10)];
       const result = resolveCollisions(nodes);
       const aY = result.find((n: any) => n.id === "a")!.position.y;
       const bY = result.find((n: any) => n.id === "b")!.position.y;
       const gap = Math.abs(bY - aY);
-      assert.ok(gap >= NODE_HEIGHT, `nodes should be at least ${NODE_HEIGHT}px apart, got ${gap}`);
+      assert.ok(
+        gap >= NODE_HEIGHT,
+        `nodes should be at least ${NODE_HEIGHT}px apart, got ${gap}`,
+      );
     });
 
     it("does not move non-overlapping nodes", () => {
-      const nodes = [
-        makeNode("a", 0, 0, 0),
-        makeNode("b", 0, 0, 200),
-      ];
+      const nodes = [makeNode("a", 0, 0, 0), makeNode("b", 0, 0, 200)];
       const result = resolveCollisions(nodes);
       assert.equal(result.find((n: any) => n.id === "a")!.position.y, 0);
       assert.equal(result.find((n: any) => n.id === "b")!.position.y, 200);
