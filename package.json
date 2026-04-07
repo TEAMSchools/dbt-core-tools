@@ -294,6 +294,7 @@
     "publish": "npx @vscode/vsce publish"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@vscode/codicons": "^0.0.45",
     "@xyflow/react": "^12.10.2",
     "react": "^19.2.4",
