@@ -1,40 +1,129 @@
-import dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
 import type { GraphNodeData } from "./types";
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 64;
+export const NODE_WIDTH = 160;
+export const NODE_HEIGHT = 64;
+const RANK_GAP = 60;
+const NODE_GAP = 20;
+const COL_WIDTH = NODE_WIDTH + RANK_GAP;
 
+/**
+ * Assigns positions to nodes based on their `data.depth` property.
+ * Nodes at the same depth are stacked vertically, centered around y=0.
+ */
 export function layoutGraph(
   nodes: Node<GraphNodeData>[],
   edges: Edge[],
 ): { nodes: Node<GraphNodeData>[]; edges: Edge[] } {
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "LR", nodesep: 30, ranksep: 80 });
-  g.setDefaultEdgeLabel(() => ({}));
+  if (nodes.length === 0) return { nodes, edges };
 
+  const byDepth = new Map<number, Node<GraphNodeData>[]>();
   for (const node of nodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    const depth = (node.data as GraphNodeData)?.depth ?? 0;
+    if (!byDepth.has(depth)) byDepth.set(depth, []);
+    byDepth.get(depth)!.push(node);
   }
 
-  for (const edge of edges) {
-    g.setEdge(edge.source, edge.target);
-  }
+  const minDepth = Math.min(...byDepth.keys());
 
-  dagre.layout(g);
+  const positioned = nodes.map((node) => {
+    const depth = (node.data as GraphNodeData)?.depth ?? 0;
+    const col = byDepth.get(depth)!;
+    const index = col.indexOf(node);
+    const colHeight = col.length * NODE_HEIGHT + (col.length - 1) * NODE_GAP;
+    const startY = Math.round(-colHeight / 2 + NODE_HEIGHT / 2);
 
-  const layoutedNodes = nodes.map((node) => {
-    const pos = g.node(node.id);
     return {
       ...node,
       position: {
-        x: pos.x - NODE_WIDTH / 2,
-        y: pos.y - NODE_HEIGHT / 2,
+        x: (depth - minDepth) * COL_WIDTH,
+        y: startY + index * (NODE_HEIGHT + NODE_GAP),
       },
     };
   });
 
-  return { nodes: layoutedNodes, edges };
+  return { nodes: positioned, edges };
 }
 
-export { NODE_WIDTH, NODE_HEIGHT };
+/**
+ * Positions new nodes adjacent to an expanded parent node.
+ * Existing nodes keep their positions; only new nodes are placed.
+ */
+export function layoutExpand(
+  existingNodes: Node<GraphNodeData>[],
+  newNodes: Node<GraphNodeData>[],
+  parentId: string,
+): Node<GraphNodeData>[] {
+  if (newNodes.length === 0) return existingNodes;
+
+  const parent = existingNodes.find((n) => n.id === parentId);
+  if (!parent) {
+    return [...existingNodes, ...newNodes];
+  }
+
+  const parentY = parent.position.y;
+  const parentDepth = (parent.data as GraphNodeData)?.depth ?? 0;
+
+  const totalHeight =
+    newNodes.length * NODE_HEIGHT + (newNodes.length - 1) * NODE_GAP;
+  const startY = parentY + NODE_HEIGHT / 2 - totalHeight / 2;
+
+  const allExisting = existingNodes;
+  const minDepth = Math.min(
+    ...allExisting.map((n) => (n.data as GraphNodeData)?.depth ?? 0),
+    ...newNodes.map((n) => (n.data as GraphNodeData)?.depth ?? parentDepth + 1),
+  );
+
+  const positioned = newNodes.map((node, i) => {
+    const depth = (node.data as GraphNodeData)?.depth ?? parentDepth + 1;
+    return {
+      ...node,
+      position: {
+        x: (depth - minDepth) * COL_WIDTH,
+        y: startY + i * (NODE_HEIGHT + NODE_GAP),
+      },
+    };
+  });
+
+  return resolveCollisions([...existingNodes, ...positioned]);
+}
+
+/**
+ * Resolves vertical overlaps between nodes at the same x-column.
+ */
+export function resolveCollisions(
+  nodes: Node<GraphNodeData>[],
+): Node<GraphNodeData>[] {
+  const byCol = new Map<number, Node<GraphNodeData>[]>();
+  for (const node of nodes) {
+    const col = Math.round(node.position.x / COL_WIDTH);
+    if (!byCol.has(col)) byCol.set(col, []);
+    byCol.get(col)!.push(node);
+  }
+
+  const result = [...nodes];
+
+  for (const [, colNodes] of byCol) {
+    if (colNodes.length < 2) continue;
+
+    colNodes.sort((a, b) => a.position.y - b.position.y);
+
+    for (let i = 1; i < colNodes.length; i++) {
+      const prev = colNodes[i - 1];
+      const curr = colNodes[i];
+      const minY = prev.position.y + NODE_HEIGHT + NODE_GAP;
+      if (curr.position.y < minY) {
+        const idx = result.findIndex((n) => n.id === curr.id);
+        if (idx !== -1) {
+          result[idx] = {
+            ...result[idx],
+            position: { ...result[idx].position, y: minY },
+          };
+          curr.position = { ...curr.position, y: minY };
+        }
+      }
+    }
+  }
+
+  return result;
+}
