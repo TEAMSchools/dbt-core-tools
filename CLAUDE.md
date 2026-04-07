@@ -37,7 +37,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 ## Key Conventions
 
-- No unbundled runtime dependencies — all deps (@xyflow/react, react, @vscode/codicons) are bundled by esbuild
+- No unbundled runtime dependencies — all deps (@xyflow/react, @dagrejs/dagre, react, @vscode/codicons) are bundled by esbuild
 - `vscode` module is external (provided by VS Code runtime)
 - `vscode` is lazy-loaded via `require('vscode')` inside functions (not top-level imports) in core modules — this allows unit tests to run without the VS Code runtime
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` statically imports from `../extension`)
@@ -57,6 +57,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Dagre layout via `@dagrejs/dagre` — single `layoutGraph` function, no incremental layout
 - Editor changes debounced (150ms) before triggering `updateCenter`
 - `ViewMode` type is defined separately in `lineagePanel.ts` and `webview/types.ts` — keep in sync
+- React Flow `fitView` prop only fires on mount — after data changes, call `fitView()` explicitly via `requestAnimationFrame`
 - Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
 - Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
 - Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`
