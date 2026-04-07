@@ -11,4 +11,5 @@ export interface GraphNodeData {
   isCurrent: boolean;
   expandedUpstream: boolean;
   expandedDownstream: boolean;
+  depth: number;
 }

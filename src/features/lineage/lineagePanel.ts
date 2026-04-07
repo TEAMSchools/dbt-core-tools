@@ -25,6 +25,7 @@ export interface GraphNode {
   testCount: number;
   hasUpstream: boolean;
   hasDownstream: boolean;
+  depth: number;
 }
 
 export interface GraphEdge {
@@ -335,41 +336,45 @@ export function buildGraphData(
   }
 
   const visitedNodes = new Set<string>();
+  const nodeDepths = new Map<string, number>();
   const edges: GraphEdge[] = [];
 
   function isTest(id: string): boolean {
     return id.startsWith("test.");
   }
 
-  function expandUpstream(id: string, remainingDepth: number): void {
+  function expandUpstream(id: string, remainingDepth: number, depth: number): void {
     if (remainingDepth <= 0) return;
     const parents = parentMap[id] ?? [];
     for (const parentId of parents) {
       if (isTest(parentId)) continue;
       if (!visitedNodes.has(parentId)) {
         visitedNodes.add(parentId);
-        expandUpstream(parentId, remainingDepth - 1);
+        nodeDepths.set(parentId, depth - 1);
+        expandUpstream(parentId, remainingDepth - 1, depth - 1);
       }
       edges.push({ source: parentId, target: id });
     }
   }
 
-  function expandDownstream(id: string, remainingDepth: number): void {
+  function expandDownstream(id: string, remainingDepth: number, depth: number): void {
     if (remainingDepth <= 0) return;
     const children = supplementedChildMap[id] ?? [];
     for (const childId of children) {
       if (isTest(childId)) continue;
       if (!visitedNodes.has(childId)) {
         visitedNodes.add(childId);
-        expandDownstream(childId, remainingDepth - 1);
+        nodeDepths.set(childId, depth + 1);
+        expandDownstream(childId, remainingDepth - 1, depth + 1);
       }
       edges.push({ source: id, target: childId });
     }
   }
 
   visitedNodes.add(centerId);
-  expandUpstream(centerId, depth);
-  expandDownstream(centerId, depth);
+  nodeDepths.set(centerId, 0);
+  expandUpstream(centerId, depth, 0);
+  expandDownstream(centerId, depth, 0);
 
   const edgeSet = new Set<string>();
   const uniqueEdges: GraphEdge[] = [];
@@ -410,6 +415,7 @@ export function buildGraphData(
         testCount: tc,
         hasUpstream: parents.length > 0,
         hasDownstream: children.length > 0,
+        depth: nodeDepths.get(id) ?? 0,
       });
       continue;
     }
@@ -428,6 +434,7 @@ export function buildGraphData(
         testCount: tc,
         hasUpstream: parents.length > 0,
         hasDownstream: children.length > 0,
+        depth: nodeDepths.get(id) ?? 0,
       });
       continue;
     }
@@ -444,6 +451,7 @@ export function buildGraphData(
       testCount: tc,
       hasUpstream: parents.length > 0,
       hasDownstream: children.length > 0,
+      depth: nodeDepths.get(id) ?? 0,
     });
   }
 
