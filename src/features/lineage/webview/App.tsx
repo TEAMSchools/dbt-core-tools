@@ -7,11 +7,14 @@ import {
   useNodesState,
   useEdgesState,
   Controls,
+  Background,
+  BackgroundVariant,
   MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import "@vscode/codicons/dist/codicon.css";
 import DbtNode from "./DbtNode";
-import { layoutGraph } from "./layout";
+import { layoutGraph, layoutExpand } from "./layout";
 import type { GraphNodeData } from "./types";
 
 const nodeTypes = { dbtNode: DbtNode };
@@ -28,6 +31,7 @@ interface IncomingNode {
   testCount: number;
   hasUpstream: boolean;
   hasDownstream: boolean;
+  depth: number;
 }
 
 interface IncomingEdge {
@@ -40,7 +44,7 @@ function App() {
     [],
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [locked, setLocked] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [emptyMessage, setEmptyMessage] = useState(
     "No lineage data available.",
@@ -97,7 +101,7 @@ function App() {
       source: e.source,
       target: e.target,
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: "var(--vscode-panel-border, #444)" },
+      style: { stroke: "#555" },
     }));
   }, []);
 
@@ -174,7 +178,6 @@ function App() {
               filteredNew,
               currentNodeIdRef.current,
             );
-            const allNodes = [...prev, ...newFlowNodes];
 
             const currentEdges = edgesRef.current;
             const existingEdgeIds = new Set(currentEdges.map((e) => e.id));
@@ -182,14 +185,13 @@ function App() {
               (e) => !existingEdgeIds.has(`e-${e.source}-${e.target}`),
             );
             const newFlowEdges = buildFlowEdges(filteredNewEdges);
-            const allEdges = [...currentEdges, ...newFlowEdges];
+            setEdges([...currentEdges, ...newFlowEdges]);
 
-            const { nodes: layouted, edges: layoutedEdges } = layoutGraph(
-              allNodes,
-              allEdges,
+            return layoutExpand(
+              prev,
+              newFlowNodes,
+              msg.expandedNodeId ?? "",
             );
-            setEdges(layoutedEdges);
-            return layouted;
           });
           break;
         }
@@ -273,6 +275,7 @@ function App() {
         proOptions={{ hideAttribution: true }}
       >
         <Controls showInteractive={false} />
+        <Background variant={BackgroundVariant.Dots} color="#333" gap={20} size={1} />
       </ReactFlow>
       {contextMenu && (
         <div

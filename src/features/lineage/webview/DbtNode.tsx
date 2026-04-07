@@ -2,25 +2,30 @@ import { memo, useCallback } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import type { GraphNodeData } from "./types";
 
-const COLOR_MAP: Record<string, string> = {
-  model: "#5fb3e0",
-  source: "#5bd4be",
-  test: "#e6e6a8",
-  exposure: "#d494d0",
-  seed: "#d9a488",
+// 4 color groups
+const BORDER_MAP: Record<string, string> = {
+  model: "#64b5f6",
+  source: "#4ecdc4",
+  seed: "#4ecdc4",
+  snapshot: "#ffcc80",
+  exposure: "#ce93d8",
+  metric: "#ce93d8",
+  semantic_model: "#ce93d8",
 };
 
 const FILL_MAP: Record<string, string> = {
-  model: "rgba(95,179,224,0.15)",
-  source: "rgba(91,212,190,0.15)",
-  test: "rgba(230,230,168,0.15)",
-  exposure: "rgba(212,148,208,0.15)",
-  seed: "rgba(217,164,136,0.15)",
+  model: "#1b2a3e",
+  source: "#1b3a36",
+  seed: "#1b3a36",
+  snapshot: "#2e2518",
+  exposure: "#2a1b2e",
+  metric: "#2a1b2e",
+  semantic_model: "#2a1b2e",
 };
 
 function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
-  const color = COLOR_MAP[data.resourceType] ?? "#6e6e6e";
-  const fill = FILL_MAP[data.resourceType] ?? "rgba(110,110,110,0.15)";
+  const border = BORDER_MAP[data.resourceType] ?? "#6e6e6e";
+  const fill = FILL_MAP[data.resourceType] ?? "#2a2a2a";
 
   const onExpand = useCallback(
     (e: React.MouseEvent, direction: "upstream" | "downstream") => {
@@ -34,7 +39,7 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
           : data.expandedDownstream;
 
       vscode.postMessage({
-        type: isExpanded ? "collapse" : "expand",
+        type: isExpanded ? "collapseDirection" : "expand",
         nodeId: data.id,
         direction,
       });
@@ -52,7 +57,6 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      // Dispatch custom event for App.tsx to handle
       window.dispatchEvent(
         new CustomEvent("dbt-context-menu", {
           detail: { nodeId: data.id, x: e.clientX, y: e.clientY },
@@ -68,20 +72,17 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
       ? data.name.slice(0, maxNameLen - 1) + "\u2026"
       : data.name;
 
+  const hasBadges = data.contractEnforced || data.testCount > 0;
+
   return (
     <div
-      className={`dbt-node${data.isCurrent ? " current" : ""}${data.contractEnforced ? " contracted" : ""}`}
+      className={`dbt-node${data.isCurrent ? " current" : ""}`}
       style={{
         background: fill,
-        borderColor: data.isCurrent
-          ? "var(--vscode-focusBorder, #007acc)"
-          : color,
-        borderWidth: data.isCurrent ? "2.5px" : "1.5px",
-        borderStyle: data.contractEnforced ? "dashed" : "solid",
-        borderRadius: 4,
-        padding: "8px 12px",
-        minWidth: 160,
-        cursor: "pointer",
+        borderColor: border,
+        borderWidth: data.isCurrent ? "2px" : "1.5px",
+        borderStyle: "solid",
+        borderRadius: 6,
       }}
       onClick={onClick}
       onContextMenu={onContextMenu}
@@ -128,15 +129,36 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
         <div className="node-mat">{data.materialization}</div>
       )}
 
-      {data.contractEnforced && (
-        <span className="node-badge" title="Contract enforced">
-          {"\uD83D\uDEE1"}
-        </span>
-      )}
-      {data.testCount > 0 && (
-        <span className="test-badge" title={`${data.testCount} tests`}>
-          {data.testCount}
-        </span>
+      {hasBadges && (
+        <div className="node-badges">
+          {data.contractEnforced && (
+            <span
+              className="node-pill"
+              style={{
+                borderColor: border,
+                color: border,
+                background: `${border}40`,
+              }}
+              title="Contract enforced"
+            >
+              <i className="codicon codicon-shield" />
+            </span>
+          )}
+          {data.testCount > 0 && (
+            <span
+              className="node-pill"
+              style={{
+                borderColor: border,
+                color: border,
+                background: `${border}40`,
+              }}
+              title={`${data.testCount} tests`}
+            >
+              <i className="codicon codicon-beaker" />
+              {data.testCount}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
