@@ -6,16 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A VS Code extension wrapping dbt Core CLI. No LSP, no framework — six features: command runner, compiled SQL viewer, lineage viewer, jump-to-properties/model, model preview, and manifest-based navigation/autocomplete. Published to the VS Code marketplace under the `TEAMSchools` publisher.
 
-Design spec: `docs/specs/2026-04-02-dbt-core-tools-vscode-extension-design.md`
-Implementation plan: `docs/plans/2026-04-03-dbt-core-tools-vscode-extension.md`
-v0.0.3 feedback spec: `docs/specs/2026-04-05-v0.0.3-feedback-design.md`
-v0.0.3 feedback plan: `docs/plans/2026-04-05-v0.0.3-feedback.md`
-v0.0.4 feedback spec: `docs/specs/2026-04-05-v0.0.4-feedback-design.md`
-v0.0.4 feedback plan: `docs/plans/2026-04-05-v0.0.4-feedback.md`
-v0.0.5 feedback spec: `docs/specs/2026-04-06-v0.0.5-feedback-design.md`
-v0.0.5 feedback plan: `docs/plans/2026-04-06-v0.0.5-feedback.md`
-v0.0.8 feedback spec: `docs/specs/2026-04-07-v0.0.8-feedback-design.md`
-v0.0.8 feedback plan: `docs/plans/2026-04-07-v0.0.8-feedback.md`
+Design specs and implementation plans live in `docs/specs/` and `docs/plans/`, named by date and topic.
 
 ## Build & Test Commands
 
@@ -61,7 +52,7 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 ## Key Conventions
 
 - TypeScript strict mode enabled
-- Zero runtime dependencies — everything bundled via esbuild
+- No unbundled runtime dependencies — all deps (@xyflow/react, react, @vscode/codicons) are bundled by esbuild
 - `vscode` module is external (provided by VS Code runtime)
 - Preview webview uses plain HTML/JS; lineage webview uses React Flow (`@xyflow/react`) with custom layout engine (no dagre), bundled by esbuild to `dist/lineage.js`
 - Extension depends on `redhat.vscode-yaml` for YAML schema validation
@@ -72,15 +63,17 @@ To debug the extension: press F5 in VS Code (launch config in `.vscode/launch.js
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` statically imports from `../extension`)
 - Command execution uses VS Code Task API (`ShellExecution` + `onDidEndTaskProcess`) for reliable completion detection — `initExecutor(context)` must be called in `activate()`
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
-- Lineage message protocol: `highlightCenter` (highlight + recenter viewport, respects lock), `resetCenter` (full graph rebuild — only from Reset button, right-click, or manifest reload via `refreshGraph()`), `mergeGraph` (adds nodes for expand), `collapseDirection` (removes nodes from a specific expansion). Lock defaults to off.
-- `updateCenter()` only sends `highlightCenter` or does nothing (non-dbt files) — it must NEVER send `resetCenter` or the graph/expanded state gets destroyed on every file focus change
-- `mergeGraph` handler must update the parent node's `data.expandedUpstream`/`expandedDownstream` in addition to `expandedRef` — otherwise expand buttons don't flip to collapse state
-- Collapse must cascade: `collectDescendants` recursively removes grandchildren and cleans up both `expandedRef` and `expandChildrenRef` for every removed node (read before delete)
-- `layoutExpand` must recalculate all existing node x-positions when upstream expansion changes `minDepth`
-- Target selection is stored in-memory (not workspace settings) — resets on window reload. Use `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
-- Lineage uses custom layout engine (`layout.ts`) — exports `layoutGraph` (initial), `layoutExpand` (incremental), `resolveCollisions` (collision resolution). No dagre dependency.
-- When compiled SQL panel is open, parse-on-save skips `dbt parse` and goes straight to `dbt compile` for faster updates
-- Codicons in webviews require: `@vscode/codicons` dependency, `loader: { ".ttf": "file" }` in esbuild config, and `font-src {{cspSource}} data:;` in the webview CSP
+### Lineage Viewer
+
+- Message protocol: `highlightCenter` (highlight + recenter, respects lock), `resetCenter` (full rebuild — Reset button, right-click, or `refreshGraph()`), `mergeGraph` (expand), `collapseDirection` (targeted removal). Lock defaults off.
+- `updateCenter()` only sends `highlightCenter` or does nothing (non-dbt files) — must NEVER send `resetCenter` or expanded state is destroyed
+- `mergeGraph` must update parent node's `data.expandedUpstream`/`expandedDownstream` in addition to `expandedRef` — otherwise buttons don't flip
+- Collapse must cascade: `collectDescendants` recursively removes grandchildren, cleans up both `expandedRef` and `expandChildrenRef` (read before delete)
+- `layoutExpand` must recalculate all x-positions when upstream expansion changes `minDepth`
+- Custom layout engine (`layout.ts`): `layoutGraph` (initial), `layoutExpand` (incremental), `resolveCollisions`. No dagre.
+- Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
+- Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
+- Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`
 - Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - `tsconfig.test.json` extends `tsconfig.json` and includes `test/` — use it for type-checking tests
