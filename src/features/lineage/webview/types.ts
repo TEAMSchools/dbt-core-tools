@@ -1,3 +1,5 @@
+export type ViewMode = "nn" | "upstream" | "downstream";
+
 export interface GraphNodeData {
   [key: string]: unknown;
   id: string;
@@ -6,10 +8,5 @@ export interface GraphNodeData {
   materialization: string;
   contractEnforced: boolean;
   testCount: number;
-  hasUpstream: boolean;
-  hasDownstream: boolean;
   isCurrent: boolean;
-  expandedUpstream: boolean;
-  expandedDownstream: boolean;
-  depth: number;
 }

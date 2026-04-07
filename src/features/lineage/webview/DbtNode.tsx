@@ -2,7 +2,6 @@ import { memo, useCallback } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import type { GraphNodeData } from "./types";
 
-// 4 color groups
 const BORDER_MAP: Record<string, string> = {
   model: "#64b5f6",
   source: "#4ecdc4",
@@ -26,26 +25,6 @@ const FILL_MAP: Record<string, string> = {
 function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
   const border = BORDER_MAP[data.resourceType] ?? "#6e6e6e";
   const fill = FILL_MAP[data.resourceType] ?? "#2a2a2a";
-
-  const onExpand = useCallback(
-    (e: React.MouseEvent, direction: "upstream" | "downstream") => {
-      e.stopPropagation();
-      const vscode = (window as any).vscodeApi;
-      if (!vscode) return;
-
-      const isExpanded =
-        direction === "upstream"
-          ? data.expandedUpstream
-          : data.expandedDownstream;
-
-      vscode.postMessage({
-        type: isExpanded ? "collapseDirection" : "expand",
-        nodeId: data.id,
-        direction,
-      });
-    },
-    [data.id, data.expandedUpstream, data.expandedDownstream],
-  );
 
   const onClick = useCallback(() => {
     const vscode = (window as any).vscodeApi;
@@ -97,32 +76,6 @@ function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
         position={Position.Right}
         style={{ visibility: "hidden" }}
       />
-
-      {data.hasUpstream && (
-        <button
-          className="expand-btn expand-btn-left"
-          onClick={(e) => onExpand(e, "upstream")}
-          title={
-            data.expandedUpstream ? "Collapse upstream" : "Expand upstream"
-          }
-        >
-          {data.expandedUpstream ? "\u2212" : "+"}
-        </button>
-      )}
-
-      {data.hasDownstream && (
-        <button
-          className="expand-btn expand-btn-right"
-          onClick={(e) => onExpand(e, "downstream")}
-          title={
-            data.expandedDownstream
-              ? "Collapse downstream"
-              : "Expand downstream"
-          }
-        >
-          {data.expandedDownstream ? "\u2212" : "+"}
-        </button>
-      )}
 
       <div className="node-name">{displayName}</div>
       {data.materialization && (

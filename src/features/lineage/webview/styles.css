@@ -27,44 +27,98 @@ body,
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   background-color: rgba(26, 26, 46, 0.9);
   border: 1px solid #333;
   border-radius: 4px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   font-size: 0.85em;
 }
 
-.lock-label {
+/* View mode button group */
+
+.view-mode-group {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  user-select: none;
-  color: #aaa;
+  gap: 0;
 }
 
-.reset-btn {
-  background: var(--vscode-button-background, #0e639c);
-  color: var(--vscode-button-foreground, #fff);
-  border: none;
-  border-radius: 3px;
+.view-mode-btn {
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #444;
   padding: 2px 8px;
   cursor: pointer;
   font-size: 0.85em;
+  font-family: inherit;
 }
 
-.reset-btn:hover {
-  background: var(--vscode-button-hoverBackground, #1177bb);
+.view-mode-btn:first-child {
+  border-radius: 3px 0 0 3px;
 }
 
-.center-label {
-  color: #888;
-  font-size: 0.9em;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.view-mode-btn:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+.view-mode-btn:not(:first-child) {
+  border-left: none;
+}
+
+.view-mode-btn.active {
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
+  border-color: var(--vscode-button-background, #0e639c);
+}
+
+.view-mode-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+}
+
+/* Depth stepper */
+
+.depth-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  border-left: 1px solid #444;
+  padding-left: 8px;
+}
+
+.depth-btn {
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #444;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.depth-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+}
+
+.depth-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.depth-label {
+  color: #e0e0e0;
+  min-width: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Custom nodes ---- */
@@ -126,44 +180,6 @@ body,
 
 .node-pill .codicon {
   font-size: 10px;
-}
-
-/* ---- Expand buttons ---- */
-
-.expand-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1.5px solid var(--vscode-button-background, #0e639c);
-  background: #1a1a2e;
-  color: var(--vscode-button-background, #0e639c);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  opacity: 0.6;
-  z-index: 5;
-}
-
-.expand-btn:hover {
-  opacity: 1;
-  background: var(--vscode-button-background, #0e639c);
-  color: var(--vscode-button-foreground, #fff);
-}
-
-.expand-btn-left {
-  left: -26px;
-}
-
-.expand-btn-right {
-  right: -26px;
 }
 
 /* ---- Context menu ---- */
