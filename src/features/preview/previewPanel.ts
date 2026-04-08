@@ -133,6 +133,7 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
       profilesDir,
       deferState,
       limit: showLimit,
+      args: "--output json",
     });
 
     // --- run dbt show ---
@@ -161,8 +162,8 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    // --- parse markdown table from stdout ---
-    const { columns, rows } = parseDbtShowOutput(result.stdout);
+    // --- parse JSON output from stdout ---
+    const { columns, rows } = parseDbtShowJson(result.stdout);
 
     if (columns.length === 0) {
       this._postMessage({
@@ -263,41 +264,42 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
 // ---------------------------------------------------------------------------
 
 /**
- * Parses the markdown-style table produced by `dbt show` stdout.
+ * Parses the JSON output produced by `dbt show --output json`.
  *
  * Expected format:
- *   | col1 | col2 |
- *   | ---- | ---- |   <- separator, index 1 -- skipped
- *   | val1 | val2 |
+ *   { "node": "model_name", "show": [ { "col1": val1, ... }, ... ] }
+ *
+ * The JSON object may be preceded by log lines — we extract the first `{...}`
+ * block from stdout.
  */
-export function parseDbtShowOutput(stdout: string): {
+export function parseDbtShowJson(stdout: string): {
   columns: string[];
   rows: string[][];
 } {
-  const tableLines = stdout
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("|"));
-
-  if (tableLines.length === 0) {
+  // Find the JSON object in stdout (skip log lines before it).
+  const jsonStart = stdout.indexOf("{");
+  if (jsonStart < 0) {
     return { columns: [], rows: [] };
   }
 
-  /**
-   * Splits a pipe-delimited table line into trimmed cell values.
-   * e.g. "| foo | bar |" -> ["foo", "bar"]
-   */
-  const parseLine = (line: string): string[] =>
-    line
-      .split("|")
-      .slice(1, -1) // drop empty first/last segments from leading/trailing `|`
-      .map((c) => c.trim());
+  try {
+    const parsed = JSON.parse(stdout.slice(jsonStart));
+    const records: Record<string, unknown>[] = parsed.show ?? [];
 
-  const columns = parseLine(tableLines[0]);
+    if (records.length === 0) {
+      return { columns: [], rows: [] };
+    }
 
-  // tableLines[1] is the separator row (e.g. "| ---- | ---- |") -- skip it
-  const dataLines = tableLines.slice(2);
-  const rows = dataLines.map(parseLine);
+    const columns = Object.keys(records[0]);
+    const rows = records.map((record) =>
+      columns.map((col) => {
+        const val = record[col];
+        return val === null || val === undefined ? "" : String(val);
+      }),
+    );
 
-  return { columns, rows };
+    return { columns, rows };
+  } catch {
+    return { columns: [], rows: [] };
+  }
 }

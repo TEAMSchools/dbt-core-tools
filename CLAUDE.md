@@ -92,6 +92,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 ## dbt-Specific Gotchas
 
 - `dbt parse` does NOT populate `compiled_code` in manifest — use `dbt compile` for that
+- `dbt show` default (table) output truncates wide results with `...` columns — use `--output json` to get all columns
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
 - `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently
