@@ -18,11 +18,14 @@ uv run dbt deps
 # Load seed data into DuckDB
 uv run dbt seed
 
-# Build everything (run models, snapshots, tests)
-uv run dbt build
+# Build everything on prod target (creates prod schema)
+uv run dbt build --target prod
 
-# Generate defer manifest (for defer toggle testing)
+# Copy prod manifest for defer testing
 cp target/manifest.json defer_manifest/manifest.json
+
+# Build on dev target (default — creates dev schema)
+uv run dbt build
 ```
 
 ## Testing Extension Features
@@ -37,7 +40,7 @@ cp target/manifest.json defer_manifest/manifest.json
 | **Jump-to-properties**     | Open `customers.sql`, run "Toggle Properties"                                                |
 | **Column sync**            | Modify columns in `customers.sql`, run "Sync Columns"                                        |
 | **Model preview**          | Open a model, run "Preview Model"                                                            |
-| **Defer**                  | Set `dbtCoreTools.deferManifestPath` to `{"jaffle_shop": "defer_manifest"}`, toggle defer on |
+| **Defer**                  | Toggle defer on, build a single model — upstream models are skipped (deferred to prod manifest). Verify by checking terminal output shows fewer models built. Note: compiled SQL always uses the current target's schema; defer only affects execution. |
 | **Stage external sources** | Open `_sources.yml`, run "Stage External Sources"                                            |
 
 ## Data

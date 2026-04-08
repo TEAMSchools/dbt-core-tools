@@ -23,7 +23,7 @@ import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
 import { CompiledSqlProvider, showCompiledSql } from "./features/compiledSql";
-import { registerCompileOnSave, spawnCompile } from "./features/compileOnSave";
+import { registerCompileOnSave } from "./features/compileOnSave";
 import { DbtDefinitionProvider } from "./features/definition";
 import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
@@ -147,11 +147,6 @@ export async function activate(
           if (model && project) {
             await project.ensureLoaded();
             compiledSqlProvider.setModel(project.name, model);
-            // Auto-compile if compiled_code is missing for the new model.
-            const node = project.findNodeByName(model);
-            if (!node || !node.compiled_code) {
-              spawnCompile(model, project, compiledSqlProvider);
-            }
           }
         }
       }

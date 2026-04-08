@@ -98,7 +98,9 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - `dbt show` default (table) output truncates wide results with `...` columns — use `--output json` to get all columns
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
+- `dbt compile -s <model>` rewrites the entire `manifest.json` — only the selected model gets `compiled_code`; all other models lose theirs
 - `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently
+- `dbt compile` with `--defer` still resolves `ref()` using the current target's schema — defer only affects execution (skipping upstream models), not compiled SQL output
 - Manifest file watcher is debounced (500ms) to avoid reading partial writes — transient JSON parse errors are logged as `[warn]` not `[error]`
 - Source `original_file_path` points to the `.yml` defining the source — multiple sources (and model `patch_path` entries) can share the same `.yml`, so file-path-based lookups are ambiguous for sources
 - `_propertiesToSql` in `properties.ts` uses indent-aware backward search — `- name:` entries exist at multiple YAML levels (models, columns, source tables); the walk tracks minimum indentation to find the resource-level name, not a nested column name
