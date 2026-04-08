@@ -24,9 +24,7 @@ import { modelNameFromPath } from "../utils/paths";
 // ---------------------------------------------------------------------------
 
 /** Fixed URI for the single compiled SQL virtual document. */
-export const COMPILED_SQL_URI = vscode.Uri.parse(
-  "dbt-compiled:compiled.sql",
-);
+export const COMPILED_SQL_URI = vscode.Uri.parse("dbt-compiled:compiled.sql");
 
 // ---------------------------------------------------------------------------
 // CompiledSqlProvider
