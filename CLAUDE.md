@@ -81,7 +81,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - `provideTextDocumentContent` is synchronous — it cannot await `ensureLoaded()`; manifest must be loaded before `setModel()` fires the change event
 - Compiled SQL provider is module-level state accessed via `getCompiledSqlProvider()` — features that open files (e.g. lineage `openFile`) must call `setModel()` directly; `onDidChangeActiveTextEditor` is unreliable when `showTextDocument` is called from webview message handlers
 - Compile-on-save runs `dbt compile -s <model>` on every .sql save — compile is a superset of parse (updates full manifest + populates `compiled_code`); compile `close` handler reloads manifest directly (bypasses file-watcher debounce)
-- `CompiledSqlProvider.isOpen` is derived from internal state — reset via `clearModel()` when the virtual document closes; `onDidCloseTextDocument` in `extension.ts` handles this
+- `CompiledSqlProvider.isOpen` checks `vscode.workspace.textDocuments` for the `dbt-compiled` scheme — no internal state to track; avoids fragility from `setTextDocumentLanguage` close/open cycles
 - All lineage CSS uses VS Code theme variables (`--vscode-editor-background`, `--vscode-widget-border`, etc.) with hardcoded fallbacks — don't introduce new hardcoded colors
 - Node fill colors are derived from `BORDER_MAP` color + `"BF"` suffix (75% opacity) — no separate `FILL_MAP`
 - Toolbar icon buttons share `.toolbar-icon-btn` base class — use it for new toolbar buttons

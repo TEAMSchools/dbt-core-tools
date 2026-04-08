@@ -238,24 +238,6 @@ export async function activate(
     ),
   );
 
-  // Reset compiled SQL state when its virtual document is closed.
-  // Use a short delay because setTextDocumentLanguage fires close+open in
-  // quick succession — clearing immediately would kill the tracking state.
-  context.subscriptions.push(
-    vscode.workspace.onDidCloseTextDocument((doc) => {
-      if (doc.uri.scheme === "dbt-compiled") {
-        setTimeout(() => {
-          const stillOpen = vscode.workspace.textDocuments.some(
-            (d) => d.uri.scheme === "dbt-compiled",
-          );
-          if (!stillOpen) {
-            compiledSqlProvider.clearModel();
-          }
-        }, 100);
-      }
-    }),
-  );
-
   // Wire manifest change events: refresh compiled SQL + lineage.
   for (const project of _discovery.projects) {
     const disposer = project.onManifestChanged(() => {

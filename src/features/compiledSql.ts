@@ -36,19 +36,22 @@ export class CompiledSqlProvider implements vscode.TextDocumentContentProvider {
   private _modelName: string | null = null;
   private _projectName: string | null = null;
 
+  /**
+   * Cache of compiled SQL keyed by "project/model". Survives manifest
+   * rewrites from `dbt compile -s <model>` which wipe compiled_code
+   * from every other model in the manifest.
+   */
+  private _compiledCache = new Map<string, string>();
+
   get modelName(): string | null {
     return this._modelName;
   }
 
-  /** Whether the compiled SQL panel is currently open. */
+  /** Whether the compiled SQL virtual document exists in any editor. */
   get isOpen(): boolean {
-    return this._modelName !== null;
-  }
-
-  /** Resets state when the compiled SQL document is closed. */
-  clearModel(): void {
-    this._modelName = null;
-    this._projectName = null;
+    return vscode.workspace.textDocuments.some(
+      (d) => d.uri.scheme === "dbt-compiled",
+    );
   }
 
   /**
@@ -95,11 +98,21 @@ export class CompiledSqlProvider implements vscode.TextDocumentContentProvider {
       return `-- dbt Core Tools: model "${this._modelName}" not found in manifest for project "${this._projectName}".\n-- Run dbt parse to populate the manifest.`;
     }
 
-    if (!node.compiled_code) {
-      return `-- dbt Core Tools: model "${this._modelName}" has no compiled SQL.\n-- Compiling... (if this persists, run dbt compile manually)`;
+    const cacheKey = `${this._projectName}/${this._modelName}`;
+
+    if (node.compiled_code) {
+      // Update cache whenever the manifest has fresh compiled_code.
+      this._compiledCache.set(cacheKey, node.compiled_code);
+      return node.compiled_code;
     }
 
-    return node.compiled_code;
+    // Manifest was rewritten by a selective compile — use cached value.
+    const cached = this._compiledCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    return `-- dbt Core Tools: model "${this._modelName}" has no compiled SQL.\n-- Compiling... (if this persists, run dbt compile manually)`;
   }
 }
 
