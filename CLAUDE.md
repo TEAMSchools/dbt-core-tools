@@ -61,7 +61,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - View modes: `nn` (upstream+downstream), `upstream`, `downstream` with configurable depth
 - Depth `0` = "All" (show entire reachable graph) — extension converts to `Infinity` for `buildGraphData`; `maxDepth` must always be computed so the UI can step back from "All"
 - Dagre layout via `@dagrejs/dagre` — single `layoutGraph` function, no incremental layout
-- Sibling groups of 7+ nodes are split into staggered multi-column layout (max 6 per column, odd columns offset by half a row height) — post-processing after dagre
+- Dagre handles all node positioning — avoid post-processing overrides for sibling groups (staggered multi-column was tried and reverted due to edge routing conflicts)
 - Editor changes debounced (150ms) before triggering `updateCenter`
 - `findNodeByFilePath` checks both `original_file_path` and `patch_path` — opening a `.yml` properties file keeps the lineage centered on the model
 - `ViewMode` type is defined separately in `lineagePanel.ts` and `webview/types.ts` — keep in sync
