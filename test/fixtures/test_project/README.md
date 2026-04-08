@@ -30,18 +30,18 @@ uv run dbt build
 
 ## Testing Extension Features
 
-| Feature                    | How to Test                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| **Lineage**                | Open any `.sql` model, run "Show Lineage" command                                            |
-| **Compiled SQL**           | Open a model, run "Show Compiled SQL"                                                        |
-| **Autocomplete**           | Type `ref('` or `source('jaffle_shop', '` or `{{` in a model                                 |
-| **Go-to-definition**       | Ctrl+click on `ref('stg_customers')` or `source(...)` or `cents_to_dollars`                  |
-| **Hover**                  | Hover over column names in models with properties                                            |
-| **Jump-to-properties**     | Open `customers.sql`, run "Toggle Properties"                                                |
-| **Column sync**            | Modify columns in `customers.sql`, run "Sync Columns"                                        |
-| **Model preview**          | Open a model, run "Preview Model"                                                            |
+| Feature                    | How to Test                                                                                                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Lineage**                | Open any `.sql` model, run "Show Lineage" command                                                                                                                                                                                                       |
+| **Compiled SQL**           | Open a model, run "Show Compiled SQL"                                                                                                                                                                                                                   |
+| **Autocomplete**           | Type `ref('` or `source('jaffle_shop', '` or `{{` in a model                                                                                                                                                                                            |
+| **Go-to-definition**       | Ctrl+click on `ref('stg_customers')` or `source(...)` or `cents_to_dollars`                                                                                                                                                                             |
+| **Hover**                  | Hover over column names in models with properties                                                                                                                                                                                                       |
+| **Jump-to-properties**     | Open `customers.sql`, run "Toggle Properties"                                                                                                                                                                                                           |
+| **Column sync**            | Modify columns in `customers.sql`, run "Sync Columns"                                                                                                                                                                                                   |
+| **Model preview**          | Open a model, run "Preview Model"                                                                                                                                                                                                                       |
 | **Defer**                  | Toggle defer on, build a single model — upstream models are skipped (deferred to prod manifest). Verify by checking terminal output shows fewer models built. Note: compiled SQL always uses the current target's schema; defer only affects execution. |
-| **Stage external sources** | Open `_sources.yml`, run "Stage External Sources"                                            |
+| **Stage external sources** | Open `_sources.yml`, run "Stage External Sources"                                                                                                                                                                                                       |
 
 ## Data
 
