@@ -1,3 +1,9 @@
 {
-  "editor.defaultFormatter": "trunk.io"
+  "editor.defaultFormatter": "trunk.io",
+  "yaml.validate": false,
+  "dbtCoreTools.dbtCommand": "test/fixtures/test_project/.venv/bin/dbt",
+  "dbtCoreTools.profilesDir": "test/fixtures/test_project",
+  "dbtCoreTools.deferManifestPath": {
+    "jaffle_shop": "test/fixtures/test_project/defer_manifest"
+  }
 }
