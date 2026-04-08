@@ -23,7 +23,7 @@ import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
 import { CompiledSqlProvider, showCompiledSql } from "./features/compiledSql";
-import { registerCompileOnSave } from "./features/compileOnSave";
+import { registerCompileOnSave, spawnCompile } from "./features/compileOnSave";
 import { DbtDefinitionProvider } from "./features/definition";
 import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
@@ -146,6 +146,11 @@ export async function activate(
           const project = _discovery?.findProjectForFile(fsPath) ?? null;
           if (model && project) {
             compiledSqlProvider.setModel(project.name, model);
+            // Auto-compile if compiled_code is missing for the new model.
+            const node = project.findNodeByName(model);
+            if (!node || !node.compiled_code) {
+              spawnCompile(model, project, compiledSqlProvider);
+            }
           }
         }
       }
@@ -238,10 +243,19 @@ export async function activate(
   );
 
   // Reset compiled SQL state when its virtual document is closed.
+  // Use a short delay because setTextDocumentLanguage fires close+open in
+  // quick succession — clearing immediately would kill the tracking state.
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((doc) => {
       if (doc.uri.scheme === "dbt-compiled") {
-        compiledSqlProvider.clearModel();
+        setTimeout(() => {
+          const stillOpen = vscode.workspace.textDocuments.some(
+            (d) => d.uri.scheme === "dbt-compiled",
+          );
+          if (!stillOpen) {
+            compiledSqlProvider.clearModel();
+          }
+        }, 100);
       }
     }),
   );

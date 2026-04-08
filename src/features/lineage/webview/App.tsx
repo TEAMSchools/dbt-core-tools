@@ -225,7 +225,7 @@ function App() {
           <button
             className="toolbar-icon-btn depth-btn"
             onClick={() => onDepthChange(-1)}
-            disabled={depth === 0 || depth <= 1}
+            disabled={depth <= 1 && depth !== 0}
           >
             −
           </button>

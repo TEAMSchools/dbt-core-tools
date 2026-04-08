@@ -98,7 +98,7 @@ async function handleSave(
  * the same model. On completion, reloads the manifest directly (bypassing
  * the file-watcher debounce) and refreshes the compiled SQL panel.
  */
-function spawnCompile(
+export function spawnCompile(
   modelName: string,
   project: DbtProject,
   compiledSqlProvider: CompiledSqlProvider,
