@@ -23,7 +23,7 @@ import { TargetSelector } from "./statusbar/targetSelector";
 import { DeferToggle } from "./statusbar/deferToggle";
 import { ManifestStatus } from "./statusbar/manifestStatus";
 import { CompiledSqlProvider, showCompiledSql } from "./features/compiledSql";
-import { registerParseOnSave } from "./features/parseOnSave";
+import { registerCompileOnSave } from "./features/compileOnSave";
 import { DbtDefinitionProvider } from "./features/definition";
 import { DbtHoverProvider } from "./features/hover";
 import { DbtCompletionProvider } from "./features/completion";
@@ -258,7 +258,7 @@ export async function activate(
   }
 
   // Register parse-on-save background runner.
-  registerParseOnSave(context, compiledSqlProvider);
+  registerCompileOnSave(context, compiledSqlProvider);
 
   // Register definition, hover, and completion providers.
   const dbtDocumentSelector: vscode.DocumentSelector = [

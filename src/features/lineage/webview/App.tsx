@@ -150,19 +150,16 @@ function App() {
 
   const onDepthChange = useCallback(
     (delta: number) => {
-      let newDepth: number;
-      if (depth === 0) {
-        // Currently "All" — minus goes to maxDepth, plus stays at All
-        newDepth = delta < 0 ? maxDepth : 0;
-      } else {
-        newDepth = depth + delta;
-        if (newDepth > maxDepth) newDepth = 0; // wrap to "All"
-        if (newDepth < 1) newDepth = 1;
-      }
+      const current = depth === 0 ? maxDepth : depth;
+      const newDepth = Math.max(1, Math.min(maxDepth, current + delta));
       changeView(viewMode, newDepth);
     },
     [changeView, viewMode, depth, maxDepth],
   );
+
+  const onToggleAll = useCallback(() => {
+    changeView(viewMode, depth === 0 ? maxDepth : 0);
+  }, [changeView, viewMode, depth, maxDepth]);
 
   const onPaneDoubleClick = useCallback(
     (event?: React.MouseEvent) => {
@@ -228,7 +225,7 @@ function App() {
           <button
             className="toolbar-icon-btn depth-btn"
             onClick={() => onDepthChange(-1)}
-            disabled={depth === 1}
+            disabled={depth === 0 || depth <= 1}
           >
             −
           </button>
@@ -236,9 +233,15 @@ function App() {
           <button
             className="toolbar-icon-btn depth-btn"
             onClick={() => onDepthChange(1)}
-            disabled={depth === 0}
+            disabled={depth === 0 || depth >= maxDepth}
           >
             +
+          </button>
+          <button
+            className={`toolbar-icon-btn depth-btn all-btn${depth === 0 ? " active" : ""}`}
+            onClick={onToggleAll}
+          >
+            All
           </button>
         </div>
       </div>

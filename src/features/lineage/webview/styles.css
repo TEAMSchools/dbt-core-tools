@@ -123,6 +123,18 @@ body,
   cursor: default;
 }
 
+.all-btn {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.all-btn.active {
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+  color: var(--vscode-editor-foreground, #e0e0e0);
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+
 .depth-label {
   color: var(--vscode-editor-foreground, #e0e0e0);
   min-width: 16px;

@@ -16,7 +16,6 @@ import {
 } from "../extension";
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
 import { getCommandOptions } from "../commands/modelCommands";
-import { waitForParse } from "./parseOnSave";
 import { modelNameFromPath } from "../utils/paths";
 
 // ---------------------------------------------------------------------------
@@ -157,6 +156,9 @@ export async function showCompiledSql(
   });
   await vscode.languages.setTextDocumentLanguage(doc, "sql");
 
+  // Ensure the manifest is loaded before checking for compiled_code.
+  await project.ensureLoaded();
+
   // Auto-compile if compiled_code is missing.
   const node = project.findNodeByName(modelName);
   if (!node || !node.compiled_code) {
@@ -177,7 +179,6 @@ export async function showCompiledSql(
     const manifestStatus = getManifestStatus();
     manifestStatus?.setRunning(`compiling ${modelName}`);
 
-    await waitForParse(project.name);
     const result = await executeAndCapture(compileCmd, project.rootPath);
     if (result.exitCode !== 0) {
       getOutputChannel().appendLine(

@@ -84,7 +84,7 @@ All settings are under the `dbtCoreTools` namespace.
 | `dbtCoreTools.dbtCommand`               | string  | `"dbt"` | Command used to invoke dbt. Use `"uv run dbt"` or similar if needed.                 |
 | `dbtCoreTools.projectDirectories`       | array   | `[]`    | Explicit project paths. When empty, projects are auto-discovered from the workspace. |
 | `dbtCoreTools.profilesDir`              | string  | `""`    | Path to the directory containing `profiles.yml`.                                     |
-| `dbtCoreTools.parseOnSave`              | boolean | `true`  | Run `dbt parse` automatically when a `.sql` file is saved.                           |
+| `dbtCoreTools.compileOnSave`            | boolean | `true`  | Run `dbt compile` automatically when a `.sql` file is saved.                         |
 | `dbtCoreTools.deferManifestPath`        | object  | `{}`    | Per-project path to a manifest used for `--defer`. Keys are project names.           |
 | `dbtCoreTools.stageExternalSourcesVars` | object  | `{}`    | Vars passed to `stage_external_sources`. Supports `${projectName}` interpolation.    |
 | `dbtCoreTools.showLimit`                | integer | `5`     | Row limit passed to `dbt show`.                                                      |
@@ -95,7 +95,7 @@ All settings are under the `dbtCoreTools` namespace.
 {
   "dbtCoreTools.dbtCommand": "uv run dbt",
   "dbtCoreTools.profilesDir": "/home/user/.dbt",
-  "dbtCoreTools.parseOnSave": true,
+  "dbtCoreTools.compileOnSave": true,
   "dbtCoreTools.deferManifestPath": {
     "my_project": "/ci/target/manifest.json"
   },

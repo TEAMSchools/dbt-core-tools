@@ -1,9 +1,14 @@
 /**
- * Parse-on-Save — Feature 2 (background component)
+ * Compile-on-Save
  *
  * Listens for `.sql` file saves inside a dbt project and runs
- * `dbt parse` in the background so the manifest stays fresh.
- * If a parse is already in-flight for that project it is cancelled first.
+ * `dbt compile -s <model>` in the background so the manifest stays
+ * fresh (including compiled_code). If a compile is already in-flight
+ * for that model it is cancelled first.
+ *
+ * `dbt compile` is a superset of `dbt parse` — it updates the full
+ * manifest AND populates compiled_code, so there is no need for a
+ * separate parse step.
  */
 
 import * as vscode from "vscode";
@@ -22,31 +27,8 @@ import { modelNameFromPath } from "../utils/paths";
 // State
 // ---------------------------------------------------------------------------
 
-/** Map from project.name → running dbt parse child process. */
-const _runningParses = new Map<string, ChildProcess>();
-
 /** Map from modelName → running dbt compile child process. */
 const _runningCompiles = new Map<string, ChildProcess>();
-
-/**
- * Returns a promise that resolves when any in-flight parse for the given
- * project finishes. Resolves immediately if no parse is running.
- */
-export function waitForParse(projectName: string): Promise<void> {
-  const child = _runningParses.get(projectName);
-  if (!child || child.exitCode !== null) {
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    const timeout = setTimeout(resolve, 30_000);
-    const done = () => {
-      clearTimeout(timeout);
-      resolve();
-    };
-    child.on("close", done);
-    child.on("error", done);
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Registration
@@ -56,7 +38,7 @@ export function waitForParse(projectName: string): Promise<void> {
  * Registers the on-save listener. Should be called once during `activate()`.
  * The returned disposable is pushed into `context.subscriptions`.
  */
-export function registerParseOnSave(
+export function registerCompileOnSave(
   context: vscode.ExtensionContext,
   compiledSqlProvider: CompiledSqlProvider,
 ): void {
@@ -80,7 +62,7 @@ async function handleSave(
   }
 
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
-  if (!config.get<boolean>("parseOnSave", true)) {
+  if (!config.get<boolean>("compileOnSave", true)) {
     return;
   }
 
@@ -95,86 +77,21 @@ async function handleSave(
     return;
   }
 
-  // Fast path: if the compiled SQL panel is open, skip parse and go straight
-  // to compile (saves one full process startup on every save).
   const modelName = modelNameFromPath(filePath);
-  if (modelName && compiledSqlProvider.isOpen) {
+  if (!modelName) {
+    return;
+  }
+
+  if (compiledSqlProvider.isOpen) {
     compiledSqlProvider.setModel(project.name, modelName);
-    cancelParse(project.name);
-    spawnCompile(modelName, project, compiledSqlProvider);
-    return;
   }
 
-  // Normal path: parse first, then compile if the panel is open.
-  const { dbtCommand, profilesDir } = getCommandOptions(project.name);
-
-  cancelParse(project.name);
-
-  const cmd = buildDbtCommand({
-    dbtCommand,
-    subcommand: "parse",
-    projectDir: project.rootPath,
-    profilesDir,
-  });
-
-  const [executable, ...args] = splitCommand(cmd);
-  if (!executable) {
-    return;
-  }
-
-  const child = spawn(executable, args, {
-    cwd: project.rootPath,
-    stdio: "ignore",
-    detached: false,
-  });
-
-  _runningParses.set(project.name, child);
-
-  child.on("close", () => {
-    if (_runningParses.get(project.name) === child) {
-      _runningParses.delete(project.name);
-    }
-
-    // Compile must run AFTER parse — both write to manifest.json, and
-    // dbt parse does NOT populate compiled_code (see CLAUDE.md gotchas).
-    if (compiledSqlProvider.isOpen) {
-      const name = modelNameFromPath(filePath);
-      if (name) {
-        cancelParse(project.name);
-        spawnCompile(name, project, compiledSqlProvider);
-      }
-    }
-  });
-
-  child.on("error", (err) => {
-    try {
-      getOutputChannel().appendLine(
-        `[error] dbt parse spawn failed for ${project.name}: ${err}`,
-      );
-    } catch {
-      // Extension not activated; skip.
-    }
-    if (_runningParses.get(project.name) === child) {
-      _runningParses.delete(project.name);
-    }
-  });
+  spawnCompile(modelName, project, compiledSqlProvider);
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function cancelParse(projectName: string): void {
-  const existing = _runningParses.get(projectName);
-  if (existing && !existing.killed) {
-    try {
-      existing.kill("SIGINT");
-    } catch {
-      // Process may have already exited; ignore.
-    }
-    _runningParses.delete(projectName);
-  }
-}
 
 /**
  * Spawns `dbt compile -s <modelName>`, cancelling any in-flight compile for
@@ -234,7 +151,14 @@ function spawnCompile(
       void manifestStatus?.clearRunning(project);
     });
   });
-  compileChild.on("error", () => {
+  compileChild.on("error", (err) => {
+    try {
+      getOutputChannel().appendLine(
+        `[error] dbt compile spawn failed for ${modelName}: ${err}`,
+      );
+    } catch {
+      // Extension not activated; skip.
+    }
     if (_runningCompiles.get(modelName) === compileChild) {
       _runningCompiles.delete(modelName);
     }

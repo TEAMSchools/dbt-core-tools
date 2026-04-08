@@ -225,10 +225,10 @@
           "default": "",
           "description": "Path to profiles directory"
         },
-        "dbtCoreTools.parseOnSave": {
+        "dbtCoreTools.compileOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "Run dbt parse on explicit save of .sql files"
+          "description": "Run dbt compile on explicit save of .sql files"
         },
         "dbtCoreTools.deferManifestPath": {
           "type": "object",

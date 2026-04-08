@@ -1,5 +1,5 @@
 /**
- * ManifestStatus — status bar item that shows when the manifest was last parsed,
+ * ManifestStatus — status bar item that shows when the manifest was last compiled,
  * and temporarily displays a running indicator while a dbt command is in flight.
  */
 
@@ -61,13 +61,13 @@ export class ManifestStatus {
 
     const mtime = await project.getManifestMtime();
     if (!mtime) {
-      this._item.text = "parsed: never";
+      this._item.text = "compiled: never";
       this._item.tooltip =
         "Manifest has not been generated yet. Click to run dbt parse.";
       this._stopRefresh();
     } else {
-      this._item.text = `parsed: ${formatRelativeTime(mtime)}`;
-      this._item.tooltip = `Manifest last parsed at ${mtime.toLocaleString()}. Click to re-parse.`;
+      this._item.text = `compiled: ${formatRelativeTime(mtime)}`;
+      this._item.tooltip = `Manifest last updated at ${mtime.toLocaleString()}. Click to run dbt parse.`;
       this._startRefresh();
     }
 

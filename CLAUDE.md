@@ -35,6 +35,8 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 **Shared state:** `src/extension.ts` owns module-level `_discovery`, `_activeProject`, and `_compiledSqlProvider`. Other modules access these via exported `getDiscovery()`, `getActiveProject()`, and `getCompiledSqlProvider()`. Commands and features import these getters — they never import `ProjectDiscovery` or `DbtProject` directly from core modules to access runtime state.
 
+**Manifest loading is lazy:** `ensureLoaded()` is fire-and-forget (`void`) from `updateContextKeys` — any feature that reads manifest data on demand must `await project.ensureLoaded()` first, or it may see an empty manifest on first activation
+
 **Command options:** All code that builds dbt commands must use `getCommandOptions(projectName)` from `modelCommands.ts` to get `dbtCommand`, `target`, `profilesDir`, and `deferState`. Never read these from config manually — that misses the selected target and defer toggle state.
 
 ## Key Conventions
@@ -44,7 +46,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - `vscode` is lazy-loaded via `require('vscode')` inside functions (not top-level imports) in core modules — this allows unit tests to run without the VS Code runtime
 - If a module already has a top-level `import * as vscode` or other static imports, don't use lazy require for additional imports in that module (e.g. `modelCommands.ts` statically imports from `../extension`)
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
-- Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
+- Background dbt compile processes are tracked via `_runningCompiles` in `compileOnSave.ts` — cancel existing processes before spawning new ones for the same model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
 - Tests using `Module._resolveFilename` vscode stubs (completion, modelCommands, etc.) may fail intermittently on Node 22 due to ESM resolution caching — if `npm test` fails but individual non-stub tests pass, this is a known issue
 - Preview webview assets (HTML/JS/CSS in `src/features/preview/webview/`) are NOT bundled by esbuild — served at runtime via `webview.asWebviewUri()`. Lineage webview is bundled to `dist/` but its `index.html` and `styles.css` are still served from source.
@@ -64,6 +66,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Dagre handles all node positioning — avoid post-processing overrides for sibling groups (staggered multi-column was tried and reverted due to edge routing conflicts)
 - Editor changes debounced (150ms) before triggering `updateCenter`
 - `findNodeByFilePath` checks both `original_file_path` and `patch_path` — opening a `.yml` properties file keeps the lineage centered on the model
+- Depth +/- buttons only cycle numeric depths (1 to maxDepth), clamped at both ends — "All" is a separate toggle button, not part of the +/- sequence
 - `_pendingCenterId` bridges node clicks and the debounced `updateCenter` — when `openFile` opens a file from a graph click, the clicked node ID is preserved as the center; without this, `_getActiveNodeId` re-resolves from the file path and can match the wrong node (e.g. a model via `patch_path` when a source was clicked, since sources and models can share `.yml` files)
 - `ViewMode` type is defined separately in `lineagePanel.ts` and `webview/types.ts` — keep in sync
 - React Flow `fitView` prop only fires on mount — after data changes, call `fitView()` explicitly via `requestAnimationFrame`
@@ -71,7 +74,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
 - Compiled SQL uses a single fixed URI (`dbt-compiled:compiled.sql`) with provider-owned state — `CompiledSqlProvider.setModel()` updates which model is shown; the panel follows the active editor automatically
 - Compiled SQL provider is module-level state accessed via `getCompiledSqlProvider()` — features that open files (e.g. lineage `openFile`) must call `setModel()` directly; `onDidChangeActiveTextEditor` is unreliable when `showTextDocument` is called from webview message handlers
-- Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`; compile `close` handler reloads manifest directly (bypasses file-watcher debounce)
+- Compile-on-save runs `dbt compile -s <model>` on every .sql save — compile is a superset of parse (updates full manifest + populates `compiled_code`); compile `close` handler reloads manifest directly (bypasses file-watcher debounce)
 - `CompiledSqlProvider.isOpen` is derived from internal state — reset via `clearModel()` when the virtual document closes; `onDidCloseTextDocument` in `extension.ts` handles this
 - All lineage CSS uses VS Code theme variables (`--vscode-editor-background`, `--vscode-widget-border`, etc.) with hardcoded fallbacks — don't introduce new hardcoded colors
 - Node fill colors are derived from `BORDER_MAP` color + `"BF"` suffix (75% opacity) — no separate `FILL_MAP`
@@ -82,7 +85,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - `dbt parse` does NOT populate `compiled_code` in manifest — use `dbt compile` for that
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
-- `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; use `waitForParse(projectName)` from `parseOnSave.ts` before spawning compile
+- `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently
 - Manifest file watcher is debounced (500ms) to avoid reading partial writes — transient JSON parse errors are logged as `[warn]` not `[error]`
 - Source `original_file_path` points to the `.yml` defining the source — multiple sources (and model `patch_path` entries) can share the same `.yml`, so file-path-based lookups are ambiguous for sources
 - `patch_path` format is `"project_name://relative/path.yml"` — use `parsePatchPath()` from `src/utils/paths.ts` to extract the relative path; don't inline the parsing
