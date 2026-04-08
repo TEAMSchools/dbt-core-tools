@@ -87,3 +87,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Source `original_file_path` points to the `.yml` defining the source — multiple sources (and model `patch_path` entries) can share the same `.yml`, so file-path-based lookups are ambiguous for sources
 - `patch_path` format is `"project_name://relative/path.yml"` — use `parsePatchPath()` from `src/utils/paths.ts` to extract the relative path; don't inline the parsing
 - Use `modelNameFromPath()` from `src/utils/paths.ts` to extract model name from a file path — don't inline the `split/pop/replace` pattern
+
+### Test dbt Project
+
+A minimal Jaffle Shop project lives at `test/fixtures/test_project/` (DuckDB adapter). Setup: `cd test/fixtures/test_project && dbt deps && dbt build && cp target/manifest.json defer_manifest/manifest.json`. Requires `dbt-core` and `dbt-duckdb` in a Python venv (Codespaces has no system pip — use `uv`).
