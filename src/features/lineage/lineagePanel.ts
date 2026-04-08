@@ -11,6 +11,8 @@ import * as path from "path";
 import { getActiveProject } from "../../extension";
 import { DbtProject } from "../../core/project";
 import { safeJoinPath } from "../../utils/paths";
+import { getCommandOptions } from "../../commands/modelCommands";
+import { buildDbtCommand, executeInTerminal } from "../../core/executor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +37,7 @@ export interface GraphEdge {
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  maxDepth: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,11 +148,12 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    const effectiveDepth = this._depth === 0 ? Infinity : this._depth;
     const graphData = buildGraphData(
       project,
       nodeId,
       this._viewMode,
-      this._depth,
+      effectiveDepth,
     );
     this._postMessage({
       type: "resetCenter",
@@ -158,6 +162,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       currentNodeId: nodeId,
       viewMode: this._viewMode,
       depth: this._depth,
+      maxDepth: graphData.maxDepth,
     });
   }
 
@@ -183,6 +188,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
   private async _handleMessage(message: {
     type: string;
     nodeId?: string;
+    nodeIds?: string[];
     viewMode?: ViewMode;
     depth?: number;
   }): Promise<void> {
@@ -222,7 +228,45 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       case "toggleProperties":
         await vscode.commands.executeCommand("dbtCoreTools.toggleProperties");
         break;
+      case "buildVisible": {
+        const nodeIds: string[] = message.nodeIds ?? [];
+        if (nodeIds.length > 0) {
+          await this._buildVisible(nodeIds);
+        }
+        break;
+      }
     }
+  }
+
+  private async _buildVisible(nodeIds: string[]): Promise<void> {
+    const project = getActiveProject();
+    if (!project) return;
+
+    const nodes = project.getNodes();
+
+    const names: string[] = [];
+    for (const id of nodeIds) {
+      const node = nodes[id];
+      if (node) names.push(node.name);
+    }
+    if (names.length === 0) return;
+
+    const selector = names.join(" ");
+    const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
+      project.name,
+    );
+
+    const command = buildDbtCommand({
+      dbtCommand,
+      subcommand: "build",
+      projectDir: project.rootPath,
+      selector,
+      target,
+      profilesDir,
+      deferState,
+    });
+
+    executeInTerminal(command, project.name);
   }
 
   private _buildHtml(webview: vscode.Webview): string {
@@ -396,7 +440,31 @@ export function buildGraphData(
     });
   }
 
-  return { nodes: graphNodes, edges: uniqueEdges };
+  // Compute the true max depth from the center node (unconstrained).
+  let trueMaxDepth = 0;
+  {
+    const seen = new Set<string>([centerId]);
+    function measureUpstream(id: string, level: number): void {
+      for (const pid of parentMap[id] ?? []) {
+        if (isTest(pid) || seen.has(pid)) continue;
+        seen.add(pid);
+        if (level + 1 > trueMaxDepth) trueMaxDepth = level + 1;
+        measureUpstream(pid, level + 1);
+      }
+    }
+    function measureDownstream(id: string, level: number): void {
+      for (const cid of supplementedChildMap[id] ?? []) {
+        if (isTest(cid) || seen.has(cid)) continue;
+        seen.add(cid);
+        if (level + 1 > trueMaxDepth) trueMaxDepth = level + 1;
+        measureDownstream(cid, level + 1);
+      }
+    }
+    if (mode === "nn" || mode === "upstream") measureUpstream(centerId, 0);
+    if (mode === "nn" || mode === "downstream") measureDownstream(centerId, 0);
+  }
+
+  return { nodes: graphNodes, edges: uniqueEdges, maxDepth: trueMaxDepth };
 }
 
 // ---------------------------------------------------------------------------

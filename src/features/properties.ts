@@ -10,7 +10,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
-import { safeJoinPath } from "../utils/paths";
+import { safeJoinPath, parsePatchPath } from "../utils/paths";
 
 // Lazy type references — never imported at module load time.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -119,8 +119,7 @@ async function _sqlToProperties(
   const node = project.findNodeByName(modelName);
 
   if (node?.patch_path) {
-    // patch_path format: "package://path/to/file.yml"
-    const patchRelative = node.patch_path.replace(/^[^/]+:\/\//, "");
+    const patchRelative = parsePatchPath(node.patch_path);
     const patchAbsPath = safeJoinPath(project.rootPath, patchRelative);
     if (!patchAbsPath) {
       vscode.window.showWarningMessage(

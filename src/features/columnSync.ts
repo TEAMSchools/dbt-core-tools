@@ -11,7 +11,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
-import { safeJoinPath } from "../utils/paths";
+import { safeJoinPath, parsePatchPath } from "../utils/paths";
 
 // Lazy type references — never imported at module load time.
 type VsCode = typeof import("vscode");
@@ -84,7 +84,7 @@ export async function syncColumns(): Promise<void> {
     return;
   }
 
-  const patchRelative = node.patch_path.replace(/^[^/]+:\/\//, "");
+  const patchRelative = parsePatchPath(node.patch_path);
   const ymlPath = safeJoinPath(project.rootPath, patchRelative);
   if (!ymlPath) {
     vscode.window.showWarningMessage(
@@ -267,8 +267,8 @@ function _indentOf(line: string): number {
 }
 
 /**
- * Searches upstream model nodes for a column with a non-empty description.
- * Returns the first description found, or null.
+ * BFS through the full upstream ancestry for a column description.
+ * Nearest ancestor wins — direct parents are checked before grandparents.
  */
 function _findUpstreamDescription(
   colName: string,
@@ -276,14 +276,32 @@ function _findUpstreamDescription(
   project: DbtProject,
 ): string | null {
   const allNodes = project.getNodes();
-  for (const nodeId of upstreamNodeIds) {
-    const upstreamNode = allNodes[nodeId];
-    if (!upstreamNode) {
+  const visited = new Set<string>();
+  const queue = [...upstreamNodeIds];
+
+  while (queue.length > 0) {
+    const nodeId = queue.shift()!;
+    if (visited.has(nodeId)) {
       continue;
     }
-    for (const [key, col] of Object.entries(upstreamNode.columns)) {
+    visited.add(nodeId);
+
+    const node = allNodes[nodeId];
+    if (!node) {
+      continue;
+    }
+
+    for (const [key, col] of Object.entries(node.columns)) {
       if (key.toLowerCase() === colName.toLowerCase() && col.description) {
         return col.description;
+      }
+    }
+
+    if (node.depends_on?.nodes) {
+      for (const parentId of node.depends_on.nodes) {
+        if (!visited.has(parentId)) {
+          queue.push(parentId);
+        }
       }
     }
   }

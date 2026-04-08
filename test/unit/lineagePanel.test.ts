@@ -27,7 +27,10 @@ require.cache["vscode"] = {
     EventEmitter: class {},
     Uri: {
       file: (f: string) => ({ fsPath: f }),
-      joinPath: (...args: any[]) => ({ fsPath: args.join("/"), toString: () => args.join("/") }),
+      joinPath: (...args: any[]) => ({
+        fsPath: args.join("/"),
+        toString: () => args.join("/"),
+      }),
     },
     commands: {},
     ViewColumn: { One: 1 },
@@ -54,7 +57,12 @@ require.cache[extensionStubPath] = {
 } as any;
 
 import * as assert from "assert";
-import { buildGraphData, GraphData, GraphNode, GraphEdge } from "../../src/features/lineage/lineagePanel";
+import {
+  buildGraphData,
+  GraphData,
+  GraphNode,
+  GraphEdge,
+} from "../../src/features/lineage/lineagePanel";
 
 // ---------------------------------------------------------------------------
 // Mock project helper
@@ -97,8 +105,20 @@ describe("buildGraphData", () => {
   it("depth 0: returns only the center node and no edges", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.A": { unique_id: "model.proj.A", name: "A", resource_type: "model", config: {}, contract: {} },
-        "model.proj.B": { unique_id: "model.proj.B", name: "B", resource_type: "model", config: {}, contract: {} },
+        "model.proj.A": {
+          unique_id: "model.proj.A",
+          name: "A",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.B": {
+          unique_id: "model.proj.B",
+          name: "B",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {
         "model.proj.A": ["model.proj.B"],
@@ -120,9 +140,27 @@ describe("buildGraphData", () => {
   it("nn mode, depth 1: includes upstream and downstream neighbors", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.center": { unique_id: "model.proj.center", name: "center", resource_type: "model", config: {}, contract: {} },
-        "model.proj.parent": { unique_id: "model.proj.parent", name: "parent", resource_type: "model", config: {}, contract: {} },
-        "model.proj.child":  { unique_id: "model.proj.child",  name: "child",  resource_type: "model", config: {}, contract: {} },
+        "model.proj.center": {
+          unique_id: "model.proj.center",
+          name: "center",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.parent": {
+          unique_id: "model.proj.parent",
+          name: "parent",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.child": {
+          unique_id: "model.proj.child",
+          name: "child",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {
         "model.proj.center": ["model.proj.parent"],
@@ -139,11 +177,17 @@ describe("buildGraphData", () => {
       ["model.proj.center", "model.proj.child", "model.proj.parent"].sort(),
     );
     assert.ok(
-      result.edges.some((e) => e.source === "model.proj.parent" && e.target === "model.proj.center"),
+      result.edges.some(
+        (e) =>
+          e.source === "model.proj.parent" && e.target === "model.proj.center",
+      ),
       "expected parent→center edge",
     );
     assert.ok(
-      result.edges.some((e) => e.source === "model.proj.center" && e.target === "model.proj.child"),
+      result.edges.some(
+        (e) =>
+          e.source === "model.proj.center" && e.target === "model.proj.child",
+      ),
       "expected center→child edge",
     );
   });
@@ -154,9 +198,27 @@ describe("buildGraphData", () => {
   it("upstream mode: includes only upstream nodes, not downstream", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.center": { unique_id: "model.proj.center", name: "center", resource_type: "model", config: {}, contract: {} },
-        "model.proj.parent": { unique_id: "model.proj.parent", name: "parent", resource_type: "model", config: {}, contract: {} },
-        "model.proj.child":  { unique_id: "model.proj.child",  name: "child",  resource_type: "model", config: {}, contract: {} },
+        "model.proj.center": {
+          unique_id: "model.proj.center",
+          name: "center",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.parent": {
+          unique_id: "model.proj.parent",
+          name: "parent",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.child": {
+          unique_id: "model.proj.child",
+          name: "child",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {
         "model.proj.center": ["model.proj.parent"],
@@ -177,7 +239,10 @@ describe("buildGraphData", () => {
       "expected child NOT in upstream result",
     );
     assert.ok(
-      result.edges.some((e) => e.source === "model.proj.parent" && e.target === "model.proj.center"),
+      result.edges.some(
+        (e) =>
+          e.source === "model.proj.parent" && e.target === "model.proj.center",
+      ),
       "expected parent→center edge",
     );
     assert.ok(
@@ -192,9 +257,27 @@ describe("buildGraphData", () => {
   it("downstream mode: includes only downstream nodes, not upstream", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.center": { unique_id: "model.proj.center", name: "center", resource_type: "model", config: {}, contract: {} },
-        "model.proj.parent": { unique_id: "model.proj.parent", name: "parent", resource_type: "model", config: {}, contract: {} },
-        "model.proj.child":  { unique_id: "model.proj.child",  name: "child",  resource_type: "model", config: {}, contract: {} },
+        "model.proj.center": {
+          unique_id: "model.proj.center",
+          name: "center",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.parent": {
+          unique_id: "model.proj.parent",
+          name: "parent",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.child": {
+          unique_id: "model.proj.child",
+          name: "child",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {
         "model.proj.center": ["model.proj.parent"],
@@ -204,7 +287,12 @@ describe("buildGraphData", () => {
       },
     });
 
-    const result = buildGraphData(project, "model.proj.center", "downstream", 1);
+    const result = buildGraphData(
+      project,
+      "model.proj.center",
+      "downstream",
+      1,
+    );
 
     assert.ok(
       result.nodes.some((n) => n.id === "model.proj.child"),
@@ -215,7 +303,10 @@ describe("buildGraphData", () => {
       "expected parent NOT in downstream result",
     );
     assert.ok(
-      result.edges.some((e) => e.source === "model.proj.center" && e.target === "model.proj.child"),
+      result.edges.some(
+        (e) =>
+          e.source === "model.proj.center" && e.target === "model.proj.child",
+      ),
       "expected center→child edge",
     );
     assert.ok(
@@ -230,9 +321,27 @@ describe("buildGraphData", () => {
   it("depth 1: gets only one level of upstream", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.C": { unique_id: "model.proj.C", name: "C", resource_type: "model", config: {}, contract: {} },
-        "model.proj.B": { unique_id: "model.proj.B", name: "B", resource_type: "model", config: {}, contract: {} },
-        "model.proj.A": { unique_id: "model.proj.A", name: "A", resource_type: "model", config: {}, contract: {} },
+        "model.proj.C": {
+          unique_id: "model.proj.C",
+          name: "C",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.B": {
+          unique_id: "model.proj.B",
+          name: "B",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.A": {
+          unique_id: "model.proj.A",
+          name: "A",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {
         "model.proj.C": ["model.proj.B"],
@@ -243,16 +352,40 @@ describe("buildGraphData", () => {
 
     const result = buildGraphData(project, "model.proj.C", "upstream", 1);
 
-    assert.ok(result.nodes.some((n) => n.id === "model.proj.B"), "depth-1 includes B");
-    assert.ok(!result.nodes.some((n) => n.id === "model.proj.A"), "depth-1 excludes A");
+    assert.ok(
+      result.nodes.some((n) => n.id === "model.proj.B"),
+      "depth-1 includes B",
+    );
+    assert.ok(
+      !result.nodes.some((n) => n.id === "model.proj.A"),
+      "depth-1 excludes A",
+    );
   });
 
   it("depth 2: gets two levels of upstream", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.C": { unique_id: "model.proj.C", name: "C", resource_type: "model", config: {}, contract: {} },
-        "model.proj.B": { unique_id: "model.proj.B", name: "B", resource_type: "model", config: {}, contract: {} },
-        "model.proj.A": { unique_id: "model.proj.A", name: "A", resource_type: "model", config: {}, contract: {} },
+        "model.proj.C": {
+          unique_id: "model.proj.C",
+          name: "C",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.B": {
+          unique_id: "model.proj.B",
+          name: "B",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
+        "model.proj.A": {
+          unique_id: "model.proj.A",
+          name: "A",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {
         "model.proj.C": ["model.proj.B"],
@@ -263,8 +396,14 @@ describe("buildGraphData", () => {
 
     const result = buildGraphData(project, "model.proj.C", "upstream", 2);
 
-    assert.ok(result.nodes.some((n) => n.id === "model.proj.B"), "depth-2 includes B");
-    assert.ok(result.nodes.some((n) => n.id === "model.proj.A"), "depth-2 includes A");
+    assert.ok(
+      result.nodes.some((n) => n.id === "model.proj.B"),
+      "depth-2 includes B",
+    );
+    assert.ok(
+      result.nodes.some((n) => n.id === "model.proj.A"),
+      "depth-2 includes A",
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -273,11 +412,20 @@ describe("buildGraphData", () => {
   it("test nodes are excluded from graph nodes but counted in testCount", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.M": { unique_id: "model.proj.M", name: "M", resource_type: "model", config: {}, contract: {} },
+        "model.proj.M": {
+          unique_id: "model.proj.M",
+          name: "M",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       parentMap: {},
       childMap: {
-        "model.proj.M": ["test.proj.test_M_not_null", "test.proj.test_M_unique"],
+        "model.proj.M": [
+          "test.proj.test_M_not_null",
+          "test.proj.test_M_unique",
+        ],
       },
     });
 
@@ -292,7 +440,11 @@ describe("buildGraphData", () => {
     // The center node should have testCount = 2
     const centerNode = result.nodes.find((n) => n.id === "model.proj.M");
     assert.ok(centerNode, "center node should be present");
-    assert.strictEqual(centerNode!.testCount, 2, "testCount should reflect number of test children");
+    assert.strictEqual(
+      centerNode!.testCount,
+      2,
+      "testCount should reflect number of test children",
+    );
 
     // No edges to test nodes
     assert.ok(
@@ -307,10 +459,21 @@ describe("buildGraphData", () => {
   it("source supplementation: source→model edge is derived from parentMap when absent from childMap", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.M": { unique_id: "model.proj.M", name: "M", resource_type: "model", config: {}, contract: {} },
+        "model.proj.M": {
+          unique_id: "model.proj.M",
+          name: "M",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       sources: {
-        "source.proj.raw.S": { unique_id: "source.proj.raw.S", name: "S", resource_type: "source", original_file_path: "models/schema.yml" },
+        "source.proj.raw.S": {
+          unique_id: "source.proj.raw.S",
+          name: "S",
+          resource_type: "source",
+          original_file_path: "models/schema.yml",
+        },
       },
       parentMap: {
         "model.proj.M": ["source.proj.raw.S"],
@@ -329,7 +492,9 @@ describe("buildGraphData", () => {
 
     // Edge from source to model should exist
     assert.ok(
-      result.edges.some((e) => e.source === "source.proj.raw.S" && e.target === "model.proj.M"),
+      result.edges.some(
+        (e) => e.source === "source.proj.raw.S" && e.target === "model.proj.M",
+      ),
       "source→model edge should be present",
     );
   });
@@ -337,10 +502,21 @@ describe("buildGraphData", () => {
   it("source supplementation: downstream traversal from source works via supplemented childMap", () => {
     const project = makeMockProject({
       nodes: {
-        "model.proj.M": { unique_id: "model.proj.M", name: "M", resource_type: "model", config: {}, contract: {} },
+        "model.proj.M": {
+          unique_id: "model.proj.M",
+          name: "M",
+          resource_type: "model",
+          config: {},
+          contract: {},
+        },
       },
       sources: {
-        "source.proj.raw.S": { unique_id: "source.proj.raw.S", name: "S", resource_type: "source", original_file_path: "models/schema.yml" },
+        "source.proj.raw.S": {
+          unique_id: "source.proj.raw.S",
+          name: "S",
+          resource_type: "source",
+          original_file_path: "models/schema.yml",
+        },
       },
       parentMap: {
         "model.proj.M": ["source.proj.raw.S"],
@@ -349,14 +525,21 @@ describe("buildGraphData", () => {
     });
 
     // Starting from the source, downstream should reach model.proj.M
-    const result = buildGraphData(project, "source.proj.raw.S", "downstream", 1);
+    const result = buildGraphData(
+      project,
+      "source.proj.raw.S",
+      "downstream",
+      1,
+    );
 
     assert.ok(
       result.nodes.some((n) => n.id === "model.proj.M"),
       "downstream from source should include child model",
     );
     assert.ok(
-      result.edges.some((e) => e.source === "source.proj.raw.S" && e.target === "model.proj.M"),
+      result.edges.some(
+        (e) => e.source === "source.proj.raw.S" && e.target === "model.proj.M",
+      ),
       "source→model edge should be present in downstream traversal",
     );
   });

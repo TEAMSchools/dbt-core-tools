@@ -12,19 +12,9 @@ const BORDER_MAP: Record<string, string> = {
   semantic_model: "#ce93d8",
 };
 
-const FILL_MAP: Record<string, string> = {
-  model: "#1b2a3e",
-  source: "#1b3a36",
-  seed: "#1b3a36",
-  snapshot: "#2e2518",
-  exposure: "#2a1b2e",
-  metric: "#2a1b2e",
-  semantic_model: "#2a1b2e",
-};
-
 function DbtNode({ data }: NodeProps<Node<GraphNodeData>>) {
   const border = BORDER_MAP[data.resourceType] ?? "#6e6e6e";
-  const fill = FILL_MAP[data.resourceType] ?? "#2a2a2a";
+  const fill = `${border}BF`;
 
   const onClick = useCallback(() => {
     const vscode = (window as any).vscodeApi;

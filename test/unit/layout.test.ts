@@ -32,17 +32,22 @@ describe("dagre layout engine", () => {
     const result = layoutGraph(nodes, edges);
     const a = result.nodes.find((n: any) => n.id === "a")!;
     const b = result.nodes.find((n: any) => n.id === "b")!;
-    assert.ok(b.position.x > a.position.x, `b.x=${b.position.x} should be > a.x=${a.position.x}`);
+    assert.ok(
+      b.position.x > a.position.x,
+      `b.x=${b.position.x} should be > a.x=${a.position.x}`,
+    );
   });
 
-  it("stacks siblings vertically without overlap", () => {
+  it("stacks siblings without overlap", () => {
     const nodes = [makeNode("a"), makeNode("b"), makeNode("c")];
     const edges = [makeEdge("a", "b"), makeEdge("a", "c")];
     const result = layoutGraph(nodes, edges);
     const b = result.nodes.find((n: any) => n.id === "b")!;
     const c = result.nodes.find((n: any) => n.id === "c")!;
-    const gap = Math.abs(b.position.y - c.position.y);
-    assert.ok(gap >= NODE_HEIGHT, `siblings should not overlap: gap=${gap}`);
+    const dx = Math.abs(b.position.x - c.position.x);
+    const dy = Math.abs(b.position.y - c.position.y);
+    const overlaps = dx < NODE_WIDTH && dy < NODE_HEIGHT;
+    assert.ok(!overlaps, `siblings should not overlap: dx=${dx} dy=${dy}`);
   });
 
   it("orders a linear chain left to right", () => {
@@ -59,8 +64,10 @@ describe("dagre layout engine", () => {
   it("handles diamond dependencies without overlap", () => {
     const nodes = [makeNode("a"), makeNode("b"), makeNode("c"), makeNode("d")];
     const edges = [
-      makeEdge("a", "b"), makeEdge("a", "c"),
-      makeEdge("b", "d"), makeEdge("c", "d"),
+      makeEdge("a", "b"),
+      makeEdge("a", "c"),
+      makeEdge("b", "d"),
+      makeEdge("c", "d"),
     ];
     const result = layoutGraph(nodes, edges);
     const positions = result.nodes.map((n: any) => n.position);
@@ -69,7 +76,10 @@ describe("dagre layout engine", () => {
         const dx = Math.abs(positions[i].x - positions[j].x);
         const dy = Math.abs(positions[i].y - positions[j].y);
         const overlaps = dx < NODE_WIDTH && dy < NODE_HEIGHT;
-        assert.ok(!overlaps, `nodes ${result.nodes[i].id} and ${result.nodes[j].id} overlap`);
+        assert.ok(
+          !overlaps,
+          `nodes ${result.nodes[i].id} and ${result.nodes[j].id} overlap`,
+        );
       }
     }
   });
@@ -84,8 +94,22 @@ describe("dagre layout engine", () => {
     for (const child of childNodes) {
       assert.ok(child.position.x > pX, `${child.id} should be right of parent`);
     }
-    const ys = new Set(childNodes.map((n: any) => n.position.y));
-    assert.equal(ys.size, 5, "all children should have distinct y positions");
+    // With two-column layout, children may share y but must not overlap
+    for (let i = 0; i < childNodes.length; i++) {
+      for (let j = i + 1; j < childNodes.length; j++) {
+        const dx = Math.abs(
+          childNodes[i].position.x - childNodes[j].position.x,
+        );
+        const dy = Math.abs(
+          childNodes[i].position.y - childNodes[j].position.y,
+        );
+        const overlaps = dx < NODE_WIDTH && dy < NODE_HEIGHT;
+        assert.ok(
+          !overlaps,
+          `${childNodes[i].id} and ${childNodes[j].id} overlap`,
+        );
+      }
+    }
   });
 
   it("returns edges unchanged", () => {

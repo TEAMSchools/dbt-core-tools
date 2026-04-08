@@ -5,7 +5,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { safeJoinPath } from "../utils/paths";
+import { safeJoinPath, parsePatchPath } from "../utils/paths";
 
 // ---------------------------------------------------------------------------
 // Manifest type definitions
@@ -205,7 +205,8 @@ export class DbtProject {
   }
 
   /**
-   * Returns the first node whose `original_file_path` resolves to `filePath`.
+   * Returns the first node whose `original_file_path` or `patch_path`
+   * resolves to `filePath`.
    * Accepts both absolute paths and project-relative paths.
    */
   findNodeByFilePath(filePath: string): ManifestNode | null {
@@ -214,11 +215,17 @@ export class DbtProject {
       const abs = path.isAbsolute(node.original_file_path)
         ? node.original_file_path
         : safeJoinPath(this.rootPath, node.original_file_path);
-      if (!abs) {
-        continue;
-      }
-      if (abs === filePath || node.original_file_path === filePath) {
+      if (abs && (abs === filePath || node.original_file_path === filePath)) {
         return node;
+      }
+      if (node.patch_path) {
+        const patchRel = parsePatchPath(node.patch_path);
+        const patchAbs = path.isAbsolute(patchRel)
+          ? patchRel
+          : safeJoinPath(this.rootPath, patchRel);
+        if (patchAbs && (patchAbs === filePath || patchRel === filePath)) {
+          return node;
+        }
       }
     }
     return null;

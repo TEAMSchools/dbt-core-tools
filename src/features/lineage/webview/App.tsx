@@ -45,11 +45,16 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
 };
 
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>(
+    [],
+  );
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [emptyMessage, setEmptyMessage] = useState("No lineage data available.");
+  const [emptyMessage, setEmptyMessage] = useState(
+    "No lineage data available.",
+  );
   const [viewMode, setViewMode] = useState<ViewMode>("nn");
   const [depth, setDepth] = useState(1);
+  const [maxDepth, setMaxDepth] = useState(1);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -78,7 +83,7 @@ function App() {
         source: e.source,
         target: e.target,
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: "#555" },
+        style: { stroke: "var(--vscode-editorWidget-border, #555)" },
       }));
 
       const { nodes: positioned, edges: layoutEdges } = layoutGraph(
@@ -104,12 +109,9 @@ function App() {
       // Sync toolbar state if the extension tells us (e.g. on initial load)
       if (msg.viewMode) setViewMode(msg.viewMode);
       if (msg.depth != null) setDepth(msg.depth);
+      if (msg.maxDepth != null) setMaxDepth(msg.maxDepth);
 
-      applyGraph(
-        msg.nodes ?? [],
-        msg.edges ?? [],
-        msg.currentNodeId ?? null,
-      );
+      applyGraph(msg.nodes ?? [], msg.edges ?? [], msg.currentNodeId ?? null);
     };
 
     window.addEventListener("message", handler);
@@ -131,18 +133,15 @@ function App() {
     vscodeApi.postMessage({ type: "ready" });
   }, []);
 
-  const changeView = useCallback(
-    (newMode: ViewMode, newDepth: number) => {
-      setViewMode(newMode);
-      setDepth(newDepth);
-      vscodeApi.postMessage({
-        type: "changeView",
-        viewMode: newMode,
-        depth: newDepth,
-      });
-    },
-    [],
-  );
+  const changeView = useCallback((newMode: ViewMode, newDepth: number) => {
+    setViewMode(newMode);
+    setDepth(newDepth);
+    vscodeApi.postMessage({
+      type: "changeView",
+      viewMode: newMode,
+      depth: newDepth,
+    });
+  }, []);
 
   const onModeClick = useCallback(
     (mode: ViewMode) => changeView(mode, depth),
@@ -151,15 +150,27 @@ function App() {
 
   const onDepthChange = useCallback(
     (delta: number) => {
-      const newDepth = Math.max(1, depth + delta);
+      let newDepth: number;
+      if (depth === 0) {
+        // Currently "All" — minus goes to maxDepth, plus stays at All
+        newDepth = delta < 0 ? maxDepth : 0;
+      } else {
+        newDepth = depth + delta;
+        if (newDepth > maxDepth) newDepth = 0; // wrap to "All"
+        if (newDepth < 1) newDepth = 1;
+      }
       changeView(viewMode, newDepth);
     },
-    [changeView, viewMode, depth],
+    [changeView, viewMode, depth, maxDepth],
   );
 
-  const onPaneDoubleClick = useCallback(() => {
-    fitView({ duration: 300 });
-  }, [fitView]);
+  const onPaneDoubleClick = useCallback(
+    (event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      fitView({ duration: 300 });
+    },
+    [fitView],
+  );
 
   const hideContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -182,7 +193,11 @@ function App() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%" }} onClick={hideContextMenu}>
+    <div
+      style={{ width: "100%", height: "100%" }}
+      onClick={hideContextMenu}
+      onDoubleClick={onPaneDoubleClick}
+    >
       <div className="toolbar">
         <div className="view-mode-group">
           {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => (
@@ -197,14 +212,32 @@ function App() {
         </div>
         <div className="depth-group">
           <button
-            className="depth-btn"
+            className="toolbar-icon-btn build-all-btn"
+            onClick={() =>
+              vscodeApi.postMessage({
+                type: "buildVisible",
+                nodeIds: nodes.map((n) => n.id),
+              })
+            }
+            title="Build visible nodes"
+          >
+            <i className="codicon codicon-rocket" />
+          </button>
+        </div>
+        <div className="depth-group">
+          <button
+            className="toolbar-icon-btn depth-btn"
             onClick={() => onDepthChange(-1)}
-            disabled={depth <= 1}
+            disabled={depth === 1}
           >
             −
           </button>
-          <span className="depth-label">{depth}</span>
-          <button className="depth-btn" onClick={() => onDepthChange(1)}>
+          <span className="depth-label">{depth === 0 ? "All" : depth}</span>
+          <button
+            className="toolbar-icon-btn depth-btn"
+            onClick={() => onDepthChange(1)}
+            disabled={depth === 0}
+          >
             +
           </button>
         </div>
@@ -216,7 +249,8 @@ function App() {
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         onPaneClick={hideContextMenu}
-        onDoubleClick={onPaneDoubleClick}
+        onNodeDoubleClick={onPaneDoubleClick}
+        zoomOnDoubleClick={false}
         fitView
         minZoom={0.1}
         maxZoom={3}
@@ -225,7 +259,7 @@ function App() {
         <Controls showInteractive={false} />
         <Background
           variant={BackgroundVariant.Dots}
-          color="#333"
+          color="var(--vscode-widget-border, #333)"
           gap={20}
           size={1}
         />

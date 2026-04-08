@@ -12,8 +12,8 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #1a1a2e;
-  color: #e0e0e0;
+  background-color: var(--vscode-editor-background, #1a1a2e);
+  color: var(--vscode-editor-foreground, #e0e0e0);
   font-family: var(--vscode-font-family, system-ui);
   font-size: var(--vscode-font-size, 13px);
 }
@@ -28,8 +28,8 @@ body,
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: rgba(26, 26, 46, 0.9);
-  border: 1px solid #333;
+  background-color: var(--vscode-toolbar-background, rgba(26, 26, 46, 0.9));
+  border: 1px solid var(--vscode-widget-border, #333);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.85em;
@@ -44,8 +44,8 @@ body,
 
 .view-mode-btn {
   background: transparent;
-  color: #aaa;
-  border: 1px solid #444;
+  color: var(--vscode-descriptionForeground, #aaa);
+  border: 1px solid var(--vscode-widget-border, #444);
   padding: 2px 8px;
   cursor: pointer;
   font-size: 0.85em;
@@ -71,8 +71,34 @@ body,
 }
 
 .view-mode-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.05);
-  color: #e0e0e0;
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+  color: var(--vscode-editor-foreground, #e0e0e0);
+}
+
+/* Toolbar icon buttons (shared base for depth and build-all) */
+
+.toolbar-icon-btn {
+  background: transparent;
+  color: var(--vscode-descriptionForeground, #aaa);
+  border: 1px solid var(--vscode-widget-border, #444);
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+}
+
+.toolbar-icon-btn:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+  color: var(--vscode-editor-foreground, #e0e0e0);
+}
+
+.build-all-btn .codicon {
+  font-size: 12px;
 }
 
 /* Depth stepper */
@@ -82,31 +108,14 @@ body,
   align-items: center;
   gap: 4px;
   margin-left: 4px;
-  border-left: 1px solid #444;
+  border-left: 1px solid var(--vscode-widget-border, #444);
   padding-left: 8px;
 }
 
 .depth-btn {
-  background: transparent;
-  color: #aaa;
-  border: 1px solid #444;
-  border-radius: 3px;
-  width: 22px;
-  height: 22px;
-  cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
   line-height: 1;
-  font-family: inherit;
-}
-
-.depth-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: #e0e0e0;
 }
 
 .depth-btn:disabled {
@@ -115,7 +124,7 @@ body,
 }
 
 .depth-label {
-  color: #e0e0e0;
+  color: var(--vscode-editor-foreground, #e0e0e0);
   min-width: 16px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -137,20 +146,21 @@ body,
 }
 
 .dbt-node.current {
-  box-shadow: 0 0 8px rgba(100, 181, 246, 0.3);
+  outline: 1.5px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
 }
 
 .node-name {
   font-size: 12px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--vscode-editor-foreground, #e0e0e0);
   text-align: center;
   white-space: nowrap;
 }
 
 .node-mat {
   font-size: 10px;
-  color: #888;
+  color: var(--vscode-editor-foreground, #e0e0e0);
   text-align: center;
   margin-top: 1px;
 }
@@ -187,8 +197,8 @@ body,
 .context-menu {
   position: fixed;
   z-index: 100;
-  background-color: #252536;
-  border: 1px solid #444;
+  background-color: var(--vscode-menu-background, #252536);
+  border: 1px solid var(--vscode-widget-border, #444);
   border-radius: 4px;
   padding: 4px 0;
   min-width: 160px;
@@ -204,17 +214,20 @@ body,
 .context-menu li {
   padding: 5px 14px;
   cursor: pointer;
-  color: #e0e0e0;
+  color: var(--vscode-menu-foreground, #e0e0e0);
   font-size: 0.9em;
   white-space: nowrap;
 }
 
 .context-menu li:hover {
-  background-color: rgba(100, 181, 246, 0.15);
+  background-color: var(
+    --vscode-list-hoverBackground,
+    rgba(100, 181, 246, 0.15)
+  );
 }
 
 .context-menu li.separator {
-  border-top: 1px solid #444;
+  border-top: 1px solid var(--vscode-widget-border, #444);
   margin: 3px 0;
   padding: 0;
   cursor: default;
@@ -232,25 +245,25 @@ body,
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #888;
+  color: var(--vscode-descriptionForeground, #888);
 }
 
 /* ---- React Flow overrides ---- */
 
 .react-flow__background {
-  background-color: #1a1a2e !important;
+  background-color: var(--vscode-editor-background, #1a1a2e) !important;
 }
 
 .react-flow__controls button {
-  background-color: #252536 !important;
-  color: #e0e0e0 !important;
-  border: 1px solid #444 !important;
+  background-color: var(--vscode-menu-background, #252536) !important;
+  color: var(--vscode-editor-foreground, #e0e0e0) !important;
+  border: 1px solid var(--vscode-widget-border, #444) !important;
 }
 
 .react-flow__controls button:hover {
-  background-color: #333 !important;
+  background-color: var(--vscode-toolbar-hoverBackground, #333) !important;
 }
 
 .react-flow__controls button svg {
-  fill: #e0e0e0 !important;
+  fill: var(--vscode-editor-foreground, #e0e0e0) !important;
 }

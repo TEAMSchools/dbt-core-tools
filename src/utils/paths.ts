@@ -20,3 +20,12 @@ export function safeJoinPath(
   }
   return resolved;
 }
+
+/**
+ * Extracts the relative file path from a dbt `patch_path` value.
+ * Strips the `"project_name://"` prefix if present.
+ */
+export function parsePatchPath(patchPath: string): string {
+  const idx = patchPath.indexOf("://");
+  return idx >= 0 ? patchPath.slice(idx + 3) : patchPath;
+}
