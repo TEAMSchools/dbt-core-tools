@@ -282,7 +282,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
       deferState,
     });
 
-    executeInTerminal(command, project.name);
+    executeInTerminal(command, project.name, project.rootPath);
   }
 
   private _buildHtml(webview: vscode.Webview): string {

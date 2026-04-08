@@ -82,5 +82,5 @@ export async function stageExternalSources(): Promise<void> {
     args: argsString,
   });
 
-  executeInTerminal(command, project.name);
+  executeInTerminal(command, project.name, project.rootPath);
 }

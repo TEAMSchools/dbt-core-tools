@@ -148,7 +148,7 @@ export function buildDbtCommand(options: DbtCommandOptions): string {
 // ---------------------------------------------------------------------------
 
 /** Map from projectName → queued commands waiting to execute. */
-const _commandQueues = new Map<string, string[]>();
+const _commandQueues = new Map<string, { command: string; cwd?: string }[]>();
 
 /** Map from projectName → whether a task is currently running. */
 const _taskRunning = new Map<string, boolean>();
@@ -185,9 +185,13 @@ export function initExecutor(context: {
  * Executes a command in a VS Code task terminal for the given project.
  * If a task is already running for the project, queues it for sequential execution.
  */
-export function executeInTerminal(command: string, projectName: string): void {
+export function executeInTerminal(
+  command: string,
+  projectName: string,
+  cwd?: string,
+): void {
   const queue = _commandQueues.get(projectName) ?? [];
-  queue.push(command);
+  queue.push({ command, cwd });
   _commandQueues.set(projectName, queue);
   drainQueue(projectName);
 }
@@ -202,7 +206,7 @@ function drainQueue(projectName: string): void {
     return;
   }
 
-  const command = queue.shift()!;
+  const { command, cwd } = queue.shift()!;
   _taskRunning.set(projectName, true);
 
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -214,7 +218,10 @@ function drainQueue(projectName: string): void {
     vscode.TaskScope.Workspace,
     `${TASK_NAME_PREFIX}${projectName}`,
     TASK_SOURCE,
-    new vscode.ShellExecution(command, { env: process.env }),
+    new vscode.ShellExecution(command, {
+      cwd,
+      env: process.env as unknown as { [key: string]: string },
+    }),
   );
   task.presentationOptions = {
     reveal: vscode.TaskRevealKind.Always,

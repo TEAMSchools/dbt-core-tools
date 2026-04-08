@@ -152,7 +152,7 @@ export async function runModelCommand(subcommand: string): Promise<void> {
     fullRefresh: pickerOptions.fullRefresh,
   });
 
-  executeInTerminal(command, project.name);
+  executeInTerminal(command, project.name, project.rootPath);
 }
 
 // ---------------------------------------------------------------------------

@@ -58,7 +58,7 @@ export function setupProject(): void {
     profilesDir: profilesDir || undefined,
   });
 
-  executeInTerminal(`${depsCmd} && ${parseCmd}`, project.name);
+  executeInTerminal(`${depsCmd} && ${parseCmd}`, project.name, project.rootPath);
 }
 
 /**
@@ -119,7 +119,7 @@ export function installDeps(): void {
     profilesDir: profilesDir || undefined,
   });
 
-  executeInTerminal(cmd, project.name);
+  executeInTerminal(cmd, project.name, project.rootPath);
 }
 
 /**
@@ -143,7 +143,7 @@ export function parseProject(): void {
     profilesDir: profilesDir || undefined,
   });
 
-  executeInTerminal(cmd, project.name);
+  executeInTerminal(cmd, project.name, project.rootPath);
 }
 
 /**
@@ -167,7 +167,7 @@ export function cleanProject(): void {
     profilesDir: profilesDir || undefined,
   });
 
-  executeInTerminal(cmd, project.name);
+  executeInTerminal(cmd, project.name, project.rootPath);
 }
 
 /**
@@ -191,7 +191,7 @@ export function debugProject(): void {
     profilesDir: profilesDir || undefined,
   });
 
-  executeInTerminal(cmd, project.name);
+  executeInTerminal(cmd, project.name, project.rootPath);
 }
 
 /**
@@ -215,5 +215,5 @@ export function retryProject(): void {
     profilesDir: profilesDir || undefined,
   });
 
-  executeInTerminal(cmd, project.name);
+  executeInTerminal(cmd, project.name, project.rootPath);
 }

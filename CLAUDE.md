@@ -39,6 +39,8 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 **Command options:** All code that builds dbt commands must use `getCommandOptions(projectName)` from `modelCommands.ts` to get `dbtCommand`, `target`, `profilesDir`, and `deferState`. Never read these from config manually — that misses the selected target and defer toggle state.
 
+**Terminal execution:** `executeInTerminal(command, projectName, cwd?)` runs commands via VS Code `ShellExecution`. Always pass `project.rootPath` as `cwd` — without it, the shell runs from the workspace root, which breaks adapters that resolve relative paths (e.g. DuckDB `profiles.yml` `path`).
+
 ## Key Conventions
 
 - No unbundled runtime dependencies — all deps (@xyflow/react, @dagrejs/dagre, react, @vscode/codicons) are bundled by esbuild
