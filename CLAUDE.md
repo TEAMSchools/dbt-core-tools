@@ -77,6 +77,8 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
 - Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
 - Compiled SQL uses a single fixed URI (`dbt-compiled:compiled.sql`) with provider-owned state — `CompiledSqlProvider.setModel()` updates which model is shown; the panel follows the active editor automatically
+- `vscode.languages.setTextDocumentLanguage()` fires `onDidCloseTextDocument` then `onDidOpenTextDocument` — any close handler for virtual documents must guard against this (e.g. defer `clearModel()` and recheck)
+- `provideTextDocumentContent` is synchronous — it cannot await `ensureLoaded()`; manifest must be loaded before `setModel()` fires the change event
 - Compiled SQL provider is module-level state accessed via `getCompiledSqlProvider()` — features that open files (e.g. lineage `openFile`) must call `setModel()` directly; `onDidChangeActiveTextEditor` is unreliable when `showTextDocument` is called from webview message handlers
 - Compile-on-save runs `dbt compile -s <model>` on every .sql save — compile is a superset of parse (updates full manifest + populates `compiled_code`); compile `close` handler reloads manifest directly (bypasses file-watcher debounce)
 - `CompiledSqlProvider.isOpen` is derived from internal state — reset via `clearModel()` when the virtual document closes; `onDidCloseTextDocument` in `extension.ts` handles this
@@ -92,6 +94,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 ## dbt-Specific Gotchas
 
 - `dbt parse` does NOT populate `compiled_code` in manifest — use `dbt compile` for that
+- `dbt build` only populates `compiled_code` for models it actually executes — skipped/cached models get empty `compiled_code`; use `dbt compile` (no selector) to populate all models
 - `dbt show` default (table) output truncates wide results with `...` columns — use `--output json` to get all columns
 - `profile:` key in `dbt_project.yml` can differ from `name:` — use `project.profileName` for profiles.yml lookup
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
@@ -104,4 +107,4 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 ### Test dbt Project
 
-A minimal Jaffle Shop project lives at `test/fixtures/test_project/` (DuckDB adapter). Setup: `cd test/fixtures/test_project && dbt deps && dbt build && cp target/manifest.json defer_manifest/manifest.json`. Requires `dbt-core` and `dbt-duckdb` in a Python venv (Codespaces has no system pip — use `uv`).
+A minimal Jaffle Shop project lives at `test/fixtures/test_project/` (DuckDB adapter). Setup: `cd test/fixtures/test_project && dbt deps && dbt build && dbt compile && cp target/manifest.json defer_manifest/manifest.json`. Requires `dbt-core` and `dbt-duckdb` in a Python venv (Codespaces has no system pip — use `uv`).

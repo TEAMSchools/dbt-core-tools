@@ -147,6 +147,10 @@ export async function showCompiledSql(
     return;
   }
 
+  // Ensure the manifest is loaded before setting the model so the first
+  // provideTextDocumentContent call can find the node's compiled_code.
+  await project.ensureLoaded();
+
   provider.setModel(project.name, modelName);
 
   const doc = await vscode.workspace.openTextDocument(COMPILED_SQL_URI);
@@ -156,8 +160,8 @@ export async function showCompiledSql(
   });
   await vscode.languages.setTextDocumentLanguage(doc, "sql");
 
-  // Ensure the manifest is loaded before checking for compiled_code.
-  await project.ensureLoaded();
+  // Re-fire after setTextDocumentLanguage (which triggers close+open).
+  provider.fireChange();
 
   // Auto-compile if compiled_code is missing.
   const node = project.findNodeByName(modelName);

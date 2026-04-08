@@ -145,6 +145,7 @@ export async function activate(
           const model = modelNameFromPath(fsPath);
           const project = _discovery?.findProjectForFile(fsPath) ?? null;
           if (model && project) {
+            await project.ensureLoaded();
             compiledSqlProvider.setModel(project.name, model);
             // Auto-compile if compiled_code is missing for the new model.
             const node = project.findNodeByName(model);
