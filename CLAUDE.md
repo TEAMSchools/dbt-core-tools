@@ -35,6 +35,8 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 **Shared state:** `src/extension.ts` owns module-level `_discovery` and `_activeProject`. Other modules access these via exported `getDiscovery()` and `getActiveProject()`. Commands and features import these getters — they never import `ProjectDiscovery` or `DbtProject` directly from core modules to access runtime state.
 
+**Command options:** All code that builds dbt commands must use `getCommandOptions(projectName)` from `modelCommands.ts` to get `dbtCommand`, `target`, `profilesDir`, and `deferState`. Never read these from config manually — that misses the selected target and defer toggle state.
+
 ## Key Conventions
 
 - No unbundled runtime dependencies — all deps (@xyflow/react, @dagrejs/dagre, react, @vscode/codicons) are bundled by esbuild
@@ -44,6 +46,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Webview postMessage requires a ready handshake — webview posts `{ type: "ready" }` after scripts load; extension buffers messages until ready
 - Background dbt processes are tracked via module-level maps (`_runningParses`, `_runningCompiles` in `parseOnSave.ts`) — cancel existing processes before spawning new ones for the same project/model
 - Tests use `ts-node/register/transpile-only` (not `ts-node/register`) — required for Node 22 + TypeScript 6
+- Tests using `Module._resolveFilename` vscode stubs (completion, modelCommands, etc.) may fail intermittently on Node 22 due to ESM resolution caching — if `npm test` fails but individual non-stub tests pass, this is a known issue
 - Preview webview assets (HTML/JS/CSS in `src/features/preview/webview/`) are NOT bundled by esbuild — served at runtime via `webview.asWebviewUri()`. Lineage webview is bundled to `dist/` but its `index.html` and `styles.css` are still served from source.
 - `.vscodeignore` excludes `src/**` but un-excludes `!src/features/*/webview/**` — any new webview directories need the same exception
 - Tests for modules that statically import `vscode` need a stub: use `Module._resolveFilename` to redirect `vscode` to a minimal shim before importing the module under test (see `test/unit/modelCommands.test.ts` for the pattern)
@@ -65,7 +68,9 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - React Flow `fitView` prop only fires on mount — after data changes, call `fitView()` explicitly via `requestAnimationFrame`
 - Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
 - Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
-- Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`
+- Compiled SQL uses a single fixed URI (`dbt-compiled:compiled.sql`) with provider-owned state — `CompiledSqlProvider.setModel()` updates which model is shown; the panel follows the active editor automatically
+- Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`; compile `close` handler reloads manifest directly (bypasses file-watcher debounce)
+- `CompiledSqlProvider.isOpen` is derived from internal state — reset via `clearModel()` when the virtual document closes; `onDidCloseTextDocument` in `extension.ts` handles this
 - All lineage CSS uses VS Code theme variables (`--vscode-editor-background`, `--vscode-widget-border`, etc.) with hardcoded fallbacks — don't introduce new hardcoded colors
 - Node fill colors are derived from `BORDER_MAP` color + `"BF"` suffix (75% opacity) — no separate `FILL_MAP`
 - Toolbar icon buttons share `.toolbar-icon-btn` base class — use it for new toolbar buttons
@@ -78,3 +83,4 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; use `waitForParse(projectName)` from `parseOnSave.ts` before spawning compile
 - Manifest file watcher is debounced (500ms) to avoid reading partial writes — transient JSON parse errors are logged as `[warn]` not `[error]`
 - `patch_path` format is `"project_name://relative/path.yml"` — use `parsePatchPath()` from `src/utils/paths.ts` to extract the relative path; don't inline the parsing
+- Use `modelNameFromPath()` from `src/utils/paths.ts` to extract model name from a file path — don't inline the `split/pop/replace` pattern

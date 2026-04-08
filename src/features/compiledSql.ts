@@ -2,7 +2,9 @@
  * Compiled SQL Viewer — Feature 2
  *
  * Provides a virtual document (dbt-compiled: scheme) that shows the
- * compiled SQL for the model open in the active editor.
+ * compiled SQL for the model open in the active editor. The panel
+ * automatically follows the active editor — switching to a different
+ * .sql file updates the compiled view without opening a new tab.
  */
 
 import * as vscode from "vscode";
@@ -15,6 +17,16 @@ import {
 import { buildDbtCommand, executeAndCapture } from "../core/executor";
 import { getCommandOptions } from "../commands/modelCommands";
 import { waitForParse } from "./parseOnSave";
+import { modelNameFromPath } from "../utils/paths";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Fixed URI for the single compiled SQL virtual document. */
+export const COMPILED_SQL_URI = vscode.Uri.parse(
+  "dbt-compiled:compiled.sql",
+);
 
 // ---------------------------------------------------------------------------
 // CompiledSqlProvider
@@ -24,47 +36,73 @@ export class CompiledSqlProvider implements vscode.TextDocumentContentProvider {
   private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
   readonly onDidChange = this._onDidChange.event;
 
-  provideTextDocumentContent(uri: vscode.Uri): string {
-    const params = new URLSearchParams(uri.query);
-    const projectName = params.get("project");
-    const modelName = params.get("model");
+  private _modelName: string | null = null;
+  private _projectName: string | null = null;
 
-    if (!projectName || !modelName) {
-      return "-- dbt Core Tools: invalid compiled SQL URI (missing project or model)";
+  get modelName(): string | null {
+    return this._modelName;
+  }
+
+  /** Whether the compiled SQL panel is currently open. */
+  get isOpen(): boolean {
+    return this._modelName !== null;
+  }
+
+  /** Resets state when the compiled SQL document is closed. */
+  clearModel(): void {
+    this._modelName = null;
+    this._projectName = null;
+  }
+
+  /**
+   * Updates the model shown in the compiled SQL panel.
+   * Fires a content change so VS Code re-fetches `provideTextDocumentContent`.
+   */
+  setModel(projectName: string, modelName: string): void {
+    if (this._projectName === projectName && this._modelName === modelName) {
+      return;
+    }
+    this._projectName = projectName;
+    this._modelName = modelName;
+    this._onDidChange.fire(COMPILED_SQL_URI);
+  }
+
+  /** Notifies VS Code to re-fetch the virtual document content. */
+  fireChange(): void {
+    this._onDidChange.fire(COMPILED_SQL_URI);
+  }
+
+  provideTextDocumentContent(_uri: vscode.Uri): string {
+    if (!this._projectName || !this._modelName) {
+      return "-- dbt Core Tools: no model selected";
     }
 
     // Find the project by name.
     let project = getActiveProject();
-    if (!project || project.name !== projectName) {
-      // Fall back to searching all discovered projects.
+    if (!project || project.name !== this._projectName) {
       try {
         const discovery = getDiscovery();
         project =
-          discovery.projects.find((p) => p.name === projectName) ?? null;
+          discovery.projects.find((p) => p.name === this._projectName) ?? null;
       } catch {
         project = null;
       }
     }
 
     if (!project) {
-      return `-- dbt Core Tools: project "${projectName}" not found`;
+      return `-- dbt Core Tools: project "${this._projectName}" not found`;
     }
 
-    const node = project.findNodeByName(modelName);
+    const node = project.findNodeByName(this._modelName);
     if (!node) {
-      return `-- dbt Core Tools: model "${modelName}" not found in manifest for project "${projectName}".\n-- Run dbt parse to populate the manifest.`;
+      return `-- dbt Core Tools: model "${this._modelName}" not found in manifest for project "${this._projectName}".\n-- Run dbt parse to populate the manifest.`;
     }
 
     if (!node.compiled_code) {
-      return `-- dbt Core Tools: model "${modelName}" has no compiled SQL.\n-- Compiling... (if this persists, run dbt compile manually)`;
+      return `-- dbt Core Tools: model "${this._modelName}" has no compiled SQL.\n-- Compiling... (if this persists, run dbt compile manually)`;
     }
 
     return node.compiled_code;
-  }
-
-  /** Notifies VS Code to re-fetch the virtual document for this URI. */
-  fireChange(uri: vscode.Uri): void {
-    this._onDidChange.fire(uri);
   }
 }
 
@@ -104,8 +142,7 @@ export async function showCompiledSql(
     return;
   }
 
-  const fileName = filePath.split(/[\\/]/).pop() ?? "";
-  const modelName = fileName.replace(/\.sql$/i, "");
+  const modelName = modelNameFromPath(filePath);
   if (!modelName) {
     vscode.window.showWarningMessage(
       "dbt Core Tools: Could not determine model name from file.",
@@ -113,11 +150,9 @@ export async function showCompiledSql(
     return;
   }
 
-  const uri = vscode.Uri.parse(
-    `dbt-compiled:${modelName}.compiled.sql?project=${encodeURIComponent(project.name)}&model=${encodeURIComponent(modelName)}`,
-  );
+  provider.setModel(project.name, modelName);
 
-  const doc = await vscode.workspace.openTextDocument(uri);
+  const doc = await vscode.workspace.openTextDocument(COMPILED_SQL_URI);
   await vscode.window.showTextDocument(doc, {
     viewColumn: vscode.ViewColumn.Beside,
     preserveFocus: true,
@@ -127,7 +162,9 @@ export async function showCompiledSql(
   // Auto-compile if compiled_code is missing.
   const node = project.findNodeByName(modelName);
   if (!node || !node.compiled_code) {
-    const { dbtCommand, target, profilesDir } = getCommandOptions(project.name);
+    const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
+      project.name,
+    );
 
     const compileCmd = buildDbtCommand({
       dbtCommand,
@@ -136,6 +173,7 @@ export async function showCompiledSql(
       selector: modelName,
       target,
       profilesDir,
+      deferState,
     });
 
     const manifestStatus = getManifestStatus();
@@ -151,6 +189,6 @@ export async function showCompiledSql(
     await project.reloadManifest();
 
     await manifestStatus?.clearRunning(project);
-    provider.fireChange(uri);
+    provider.fireChange();
   }
 }

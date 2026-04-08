@@ -93,7 +93,7 @@
       {
         "command": "dbtCoreTools.runModel",
         "title": "dbt Core Tools: Run Model",
-        "icon": "$(play)"
+        "icon": "$(package)"
       },
       {
         "command": "dbtCoreTools.buildModel",
@@ -146,19 +146,19 @@
     "menus": {
       "editor/title": [
         {
-          "command": "dbtCoreTools.runModel",
+          "command": "dbtCoreTools.buildModel",
           "group": "navigation@1",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "command": "dbtCoreTools.buildModel",
+          "command": "dbtCoreTools.showCompiledSql",
           "group": "navigation@2",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "command": "dbtCoreTools.testModel",
+          "command": "dbtCoreTools.toggleProperties",
           "group": "navigation@3",
-          "when": "dbtCoreTools.isDbtSqlFile"
+          "when": "dbtCoreTools.isDbtFile"
         },
         {
           "command": "dbtCoreTools.showModel",
@@ -171,14 +171,14 @@
           "when": "dbtCoreTools.isDbtSqlFileWithSources"
         },
         {
-          "command": "dbtCoreTools.showCompiledSql",
+          "command": "dbtCoreTools.runModel",
           "group": "navigation@6",
           "when": "dbtCoreTools.isDbtSqlFile"
         },
         {
-          "command": "dbtCoreTools.toggleProperties",
+          "command": "dbtCoreTools.testModel",
           "group": "navigation@7",
-          "when": "dbtCoreTools.isDbtFile"
+          "when": "dbtCoreTools.isDbtSqlFile"
         }
       ],
       "editor/context": [

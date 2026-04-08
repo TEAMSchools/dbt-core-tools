@@ -31,6 +31,7 @@ import { toggleProperties } from "./features/properties";
 import { syncColumns } from "./features/columnSync";
 import { LineageViewProvider } from "./features/lineage/lineagePanel";
 import { PreviewViewProvider } from "./features/preview/previewPanel";
+import { modelNameFromPath } from "./utils/paths";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -131,6 +132,18 @@ export async function activate(
       await updateStatusBar();
       clearTimeout(lineageDebounce);
       lineageDebounce = setTimeout(() => lineageProvider.updateCenter(), 150);
+
+      // Update compiled SQL panel to follow the active editor.
+      if (compiledSqlProvider.isOpen && editor) {
+        const { scheme, fsPath } = editor.document.uri;
+        if (scheme === "file" && fsPath.endsWith(".sql")) {
+          const model = modelNameFromPath(fsPath);
+          const project = _discovery?.findProjectForFile(fsPath) ?? null;
+          if (model && project) {
+            compiledSqlProvider.setModel(project.name, model);
+          }
+        }
+      }
     }),
   );
 
@@ -218,17 +231,20 @@ export async function activate(
     ),
   );
 
-  // Wire manifest change events: refresh any open compiled SQL documents.
+  // Reset compiled SQL state when its virtual document is closed.
+  context.subscriptions.push(
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      if (doc.uri.scheme === "dbt-compiled") {
+        compiledSqlProvider.clearModel();
+      }
+    }),
+  );
+
+  // Wire manifest change events: refresh compiled SQL + lineage.
   for (const project of _discovery.projects) {
     const disposer = project.onManifestChanged(() => {
-      for (const doc of vscode.workspace.textDocuments) {
-        if (doc.uri.scheme !== "dbt-compiled") {
-          continue;
-        }
-        const params = new URLSearchParams(doc.uri.query);
-        if (params.get("project") === project.name) {
-          compiledSqlProvider.fireChange(doc.uri);
-        }
+      if (compiledSqlProvider.isOpen) {
+        compiledSqlProvider.fireChange();
       }
       lineageProvider.refreshGraph();
     });
@@ -236,7 +252,7 @@ export async function activate(
   }
 
   // Register parse-on-save background runner.
-  registerParseOnSave(context);
+  registerParseOnSave(context, compiledSqlProvider);
 
   // Register definition, hover, and completion providers.
   const dbtDocumentSelector: vscode.DocumentSelector = [

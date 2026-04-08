@@ -11,10 +11,12 @@ import { spawn, ChildProcess } from "child_process";
 import {
   buildDbtCommand,
   splitCommand,
-  resolveDbtExecutable,
 } from "../core/executor";
-import { getDiscovery, getOutputChannel } from "../extension";
-import { resolveWorkspacePath } from "../commands/modelCommands";
+import { getDiscovery, getManifestStatus, getOutputChannel } from "../extension";
+import { getCommandOptions } from "../commands/modelCommands";
+import { CompiledSqlProvider } from "./compiledSql";
+import type { DbtProject } from "../core/project";
+import { modelNameFromPath } from "../utils/paths";
 
 // ---------------------------------------------------------------------------
 // State
@@ -54,9 +56,12 @@ export function waitForParse(projectName: string): Promise<void> {
  * Registers the on-save listener. Should be called once during `activate()`.
  * The returned disposable is pushed into `context.subscriptions`.
  */
-export function registerParseOnSave(context: vscode.ExtensionContext): void {
+export function registerParseOnSave(
+  context: vscode.ExtensionContext,
+  compiledSqlProvider: CompiledSqlProvider,
+): void {
   const disposable = vscode.workspace.onDidSaveTextDocument((document) => {
-    void handleSave(document);
+    void handleSave(document, compiledSqlProvider);
   });
   context.subscriptions.push(disposable);
 }
@@ -65,21 +70,20 @@ export function registerParseOnSave(context: vscode.ExtensionContext): void {
 // Internal handler
 // ---------------------------------------------------------------------------
 
-async function handleSave(document: vscode.TextDocument): Promise<void> {
-  // Only process .sql files.
+async function handleSave(
+  document: vscode.TextDocument,
+  compiledSqlProvider: CompiledSqlProvider,
+): Promise<void> {
   const filePath = document.uri.fsPath;
   if (!filePath.endsWith(".sql")) {
     return;
   }
 
-  // Check the parseOnSave setting.
   const config = vscode.workspace.getConfiguration("dbtCoreTools");
-  const parseOnSave = config.get<boolean>("parseOnSave", true);
-  if (!parseOnSave) {
+  if (!config.get<boolean>("parseOnSave", true)) {
     return;
   }
 
-  // Find the project that owns this file.
   let discovery;
   try {
     discovery = getDiscovery();
@@ -91,55 +95,26 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     return;
   }
 
-  // Build command options (needed for both fast-path and normal parse path).
-  const rawDbtCommand = config.get<string>("dbtCommand", "dbt");
-  const rawProfilesDir = config.get<string>("profilesDir", "");
-  const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
-  const dbtCommand = resolveDbtExecutable(rawDbtCommand, wsRoot);
-  const profilesDir =
-    resolveWorkspacePath(rawProfilesDir || undefined, wsRoot) ?? "";
-
-  // Fast path: if a compiled SQL doc is open for this model, skip parse and
-  // go straight to compile (saves one full process startup on every save).
-  const fileName = filePath.split(/[\\/]/).pop() ?? "";
-  const modelName = fileName.replace(/\.sql$/i, "");
-  const hasOpenCompiledDoc =
-    !!modelName &&
-    vscode.workspace.textDocuments.some(
-      (doc) =>
-        doc.uri.scheme === "dbt-compiled" &&
-        new URLSearchParams(doc.uri.query).get("model") === modelName,
-    );
-
-  if (hasOpenCompiledDoc) {
-    // Cancel any in-flight parse first — parse and compile both write to
-    // manifest.json and must never run concurrently.
-    spawnCompileDirect(
-      modelName,
-      dbtCommand,
-      project.rootPath,
-      profilesDir,
-      project.name,
-    );
+  // Fast path: if the compiled SQL panel is open, skip parse and go straight
+  // to compile (saves one full process startup on every save).
+  const modelName = modelNameFromPath(filePath);
+  if (modelName && compiledSqlProvider.isOpen) {
+    compiledSqlProvider.setModel(project.name, modelName);
+    cancelParse(project.name);
+    spawnCompile(modelName, project, compiledSqlProvider);
     return;
   }
 
-  // Cancel any in-flight parse for this project.
-  const existing = _runningParses.get(project.name);
-  if (existing && !existing.killed) {
-    try {
-      existing.kill("SIGINT");
-    } catch {
-      // Process may have already exited; ignore.
-    }
-    _runningParses.delete(project.name);
-  }
+  // Normal path: parse first, then compile if the panel is open.
+  const { dbtCommand, profilesDir } = getCommandOptions(project.name);
+
+  cancelParse(project.name);
 
   const cmd = buildDbtCommand({
     dbtCommand,
     subcommand: "parse",
     projectDir: project.rootPath,
-    profilesDir: profilesDir || undefined,
+    profilesDir,
   });
 
   const [executable, ...args] = splitCommand(cmd);
@@ -147,7 +122,6 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
     return;
   }
 
-  // Spawn the parse process in the background.
   const child = spawn(executable, args, {
     cwd: project.rootPath,
     stdio: "ignore",
@@ -157,15 +131,19 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
   _runningParses.set(project.name, child);
 
   child.on("close", () => {
-    // Clean up after the process exits (only if it's still the current one).
     if (_runningParses.get(project.name) === child) {
       _runningParses.delete(project.name);
     }
 
-    // Once parse finishes, compile if a compiled SQL document is open.
     // Compile must run AFTER parse — both write to manifest.json, and
     // dbt parse does NOT populate compiled_code (see CLAUDE.md gotchas).
-    spawnCompileIfNeeded(filePath, dbtCommand, project.rootPath, profilesDir);
+    if (compiledSqlProvider.isOpen) {
+      const name = modelNameFromPath(filePath);
+      if (name) {
+        cancelParse(project.name);
+        spawnCompile(name, project, compiledSqlProvider);
+      }
+    }
   });
 
   child.on("error", (err) => {
@@ -182,41 +160,32 @@ async function handleSave(document: vscode.TextDocument): Promise<void> {
   });
 }
 
-function spawnCompileIfNeeded(
-  filePath: string,
-  dbtCommand: string,
-  projectRoot: string,
-  profilesDir: string,
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function cancelParse(projectName: string): void {
+  const existing = _runningParses.get(projectName);
+  if (existing && !existing.killed) {
+    try {
+      existing.kill("SIGINT");
+    } catch {
+      // Process may have already exited; ignore.
+    }
+    _runningParses.delete(projectName);
+  }
+}
+
+/**
+ * Spawns `dbt compile -s <modelName>`, cancelling any in-flight compile for
+ * the same model. On completion, reloads the manifest directly (bypassing
+ * the file-watcher debounce) and refreshes the compiled SQL panel.
+ */
+function spawnCompile(
+  modelName: string,
+  project: DbtProject,
+  compiledSqlProvider: CompiledSqlProvider,
 ): void {
-  const fileName = filePath.split(/[\\/]/).pop() ?? "";
-  const modelName = fileName.replace(/\.sql$/i, "");
-  if (!modelName) {
-    return;
-  }
-
-  const hasOpenCompiledDoc = vscode.workspace.textDocuments.some(
-    (doc) =>
-      doc.uri.scheme === "dbt-compiled" &&
-      new URLSearchParams(doc.uri.query).get("model") === modelName,
-  );
-
-  if (!hasOpenCompiledDoc) {
-    return;
-  }
-
-  const compileCmd = buildDbtCommand({
-    dbtCommand,
-    subcommand: "compile",
-    projectDir: projectRoot,
-    selector: modelName,
-    profilesDir: profilesDir || undefined,
-  });
-
-  const [compileExe, ...compileArgs] = splitCommand(compileCmd);
-  if (!compileExe) {
-    return;
-  }
-
   // Cancel any in-flight compile for this model.
   const existing = _runningCompiles.get(modelName);
   if (existing && !existing.killed) {
@@ -227,68 +196,17 @@ function spawnCompileIfNeeded(
     }
   }
 
-  const compileChild = spawn(compileExe, compileArgs, {
-    cwd: projectRoot,
-    stdio: "ignore",
-    detached: false,
-  });
-  _runningCompiles.set(modelName, compileChild);
-
-  compileChild.on("close", () => {
-    if (_runningCompiles.get(modelName) === compileChild) {
-      _runningCompiles.delete(modelName);
-    }
-  });
-  compileChild.on("error", () => {
-    if (_runningCompiles.get(modelName) === compileChild) {
-      _runningCompiles.delete(modelName);
-    }
-  });
-}
-
-/**
- * Directly spawn `dbt compile -s <modelName>` without waiting for parse first.
- * Used by the fast path in `handleSave()` when a compiled SQL doc is already
- * open — skips the parse step entirely to reduce latency on each save.
- *
- * IMPORTANT: cancel any in-flight parse for the current project before spawning,
- * because parse and compile both write to manifest.json and must never run
- * concurrently.
- */
-function spawnCompileDirect(
-  modelName: string,
-  dbtCommand: string,
-  projectRoot: string,
-  profilesDir: string,
-  projectName: string,
-): void {
-  // Cancel running parse for THIS project only — compile and parse must not overlap.
-  const existingParse = _runningParses.get(projectName);
-  if (existingParse && !existingParse.killed) {
-    try {
-      existingParse.kill("SIGINT");
-    } catch {
-      // Process may have already exited; ignore.
-    }
-    _runningParses.delete(projectName);
-  }
-
-  // Cancel any in-flight compile for this model.
-  const existingCompile = _runningCompiles.get(modelName);
-  if (existingCompile && !existingCompile.killed) {
-    try {
-      existingCompile.kill("SIGINT");
-    } catch {
-      // Process may have already exited; ignore.
-    }
-  }
+  const { dbtCommand, target, profilesDir, deferState } =
+    getCommandOptions(project.name);
 
   const compileCmd = buildDbtCommand({
     dbtCommand,
     subcommand: "compile",
-    projectDir: projectRoot,
+    projectDir: project.rootPath,
     selector: modelName,
-    profilesDir: profilesDir || undefined,
+    target,
+    profilesDir,
+    deferState,
   });
 
   const [compileExe, ...compileArgs] = splitCommand(compileCmd);
@@ -296,8 +214,11 @@ function spawnCompileDirect(
     return;
   }
 
+  const manifestStatus = getManifestStatus();
+  manifestStatus?.setRunning(`compiling ${modelName}`);
+
   const compileChild = spawn(compileExe, compileArgs, {
-    cwd: projectRoot,
+    cwd: project.rootPath,
     stdio: "ignore",
     detached: false,
   });
@@ -307,10 +228,16 @@ function spawnCompileDirect(
     if (_runningCompiles.get(modelName) === compileChild) {
       _runningCompiles.delete(modelName);
     }
+    // Bypass the 500ms file-watcher debounce.
+    void project.reloadManifest().then(() => {
+      compiledSqlProvider.fireChange();
+      void manifestStatus?.clearRunning(project);
+    });
   });
   compileChild.on("error", () => {
     if (_runningCompiles.get(modelName) === compileChild) {
       _runningCompiles.delete(modelName);
     }
+    void manifestStatus?.clearRunning(project);
   });
 }
