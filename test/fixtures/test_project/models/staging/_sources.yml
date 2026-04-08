@@ -57,5 +57,5 @@ sources:
       - name: raw_reviews
         description: Product reviews loaded from external CSV
         external:
-          location: "seeds/raw_reviews.csv"
+          location: seeds/raw_reviews.csv
           file_format: csv

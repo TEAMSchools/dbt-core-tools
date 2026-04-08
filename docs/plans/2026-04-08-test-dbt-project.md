@@ -87,7 +87,7 @@ packages:
 
 - [ ] **Step 4: Create .gitignore**
 
-```
+```text
 target/
 dbt_packages/
 logs/
@@ -545,7 +545,7 @@ cp target/manifest.json defer_manifest/manifest.json
 | -------------------------- | -------------------------------------------------------------------------------------------- |
 | **Lineage**                | Open any `.sql` model, run "Show Lineage" command                                            |
 | **Compiled SQL**           | Open a model, run "Show Compiled SQL"                                                        |
-| **Autocomplete**           | Type `ref('` or `source('jaffle_shop', '` or `{{ ` in a model                                |
+| **Autocomplete**           | Type `ref('` or `source('jaffle_shop', '` or `{{` in a model                                 |
 | **Go-to-definition**       | Ctrl+click on `ref('stg_customers')` or `source(...)` or `cents_to_dollars`                  |
 | **Hover**                  | Hover over column names in models with properties                                            |
 | **Jump-to-properties**     | Open `customers.sql`, run "Toggle Properties"                                                |
@@ -558,14 +558,12 @@ cp target/manifest.json defer_manifest/manifest.json
 
 Seeds contain 5 rows each. Amounts are in cents — the `cents_to_dollars` macro converts them.
 
-````
-
 - [ ] **Step 2: Commit**
 
 ```bash
 git add test/fixtures/test_project/README.md
 git commit -m "docs: add README with setup instructions for test project"
-````
+```
 
 ---
 

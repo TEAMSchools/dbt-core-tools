@@ -13,13 +13,13 @@ Minimal dbt project for testing the dbt-core-tools VS Code extension. Covers: li
 cd test/fixtures/test_project
 
 # Install dbt packages (dbt-utils, dbt-external-tables)
-dbt deps
+uv run dbt deps
 
 # Load seed data into DuckDB
-dbt seed
+uv run dbt seed
 
 # Build everything (run models, snapshots, tests)
-dbt build
+uv run dbt build
 
 # Generate defer manifest (for defer toggle testing)
 cp target/manifest.json defer_manifest/manifest.json
