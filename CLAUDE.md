@@ -88,6 +88,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently
 - Manifest file watcher is debounced (500ms) to avoid reading partial writes — transient JSON parse errors are logged as `[warn]` not `[error]`
 - Source `original_file_path` points to the `.yml` defining the source — multiple sources (and model `patch_path` entries) can share the same `.yml`, so file-path-based lookups are ambiguous for sources
+- `_propertiesToSql` in `properties.ts` uses indent-aware backward search — `- name:` entries exist at multiple YAML levels (models, columns, source tables); the walk tracks minimum indentation to find the resource-level name, not a nested column name
 - `patch_path` format is `"project_name://relative/path.yml"` — use `parsePatchPath()` from `src/utils/paths.ts` to extract the relative path; don't inline the parsing
 - Use `modelNameFromPath()` from `src/utils/paths.ts` to extract model name from a file path — don't inline the `split/pop/replace` pattern
 

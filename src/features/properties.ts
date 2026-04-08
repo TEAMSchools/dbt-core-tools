@@ -177,19 +177,46 @@ async function _propertiesToSql(
   const text = doc.getText();
   const lines = text.split("\n");
 
-  // Search backwards from the cursor line for `- name: <modelName>`.
+  // Walk backwards from the cursor to find the outermost (least-indented)
+  // `- name:` entry.  This skips column-level names and picks the resource
+  // (model / seed / source) name instead.
   let modelName: string | null = null;
+  let minIndent = Infinity;
+  let sectionType: string | null = null;
+
   for (let i = cursorLine; i >= 0; i--) {
-    const match = /^\s*-\s+name:\s+(\S+)/.exec(lines[i]);
-    if (match) {
-      modelName = match[1];
-      break;
+    const nameMatch = /^(\s*)-\s+name:\s+(\S+)/.exec(lines[i]);
+    if (nameMatch) {
+      const indent = nameMatch[1].length;
+      if (indent < minIndent) {
+        minIndent = indent;
+        modelName = nameMatch[2];
+      }
+    }
+
+    // Stop once we reach the section header that contains our match.
+    if (modelName !== null) {
+      const headerMatch =
+        /^(\s*)(models|seeds|snapshots|analyses|sources|exposures|metrics|semantic_models|unit_tests):/.exec(
+          lines[i],
+        );
+      if (headerMatch && headerMatch[1].length < minIndent) {
+        sectionType = headerMatch[2];
+        break;
+      }
     }
   }
 
   if (!modelName) {
     vscode.window.showWarningMessage(
       "dbt Core Tools: Could not find a `- name:` entry above the cursor.",
+    );
+    return;
+  }
+
+  if (sectionType === "sources") {
+    vscode.window.showWarningMessage(
+      "dbt Core Tools: Toggle Properties works with model files, not sources.",
     );
     return;
   }
