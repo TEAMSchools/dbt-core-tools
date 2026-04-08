@@ -62,6 +62,14 @@ export function resolveDbtExecutable(
   projectDir: string,
 ): string {
   if (dbtCommand !== "dbt") {
+    // Resolve relative paths against the workspace root so the command works
+    // regardless of the cwd used by the caller (terminal vs executeAndCapture).
+    if (!path.isAbsolute(dbtCommand)) {
+      const resolved = path.resolve(projectDir, dbtCommand);
+      if (fs.existsSync(resolved)) {
+        return resolved;
+      }
+    }
     return dbtCommand;
   }
 

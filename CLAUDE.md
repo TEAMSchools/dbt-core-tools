@@ -39,6 +39,8 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 **Command options:** All code that builds dbt commands must use `getCommandOptions(projectName)` from `modelCommands.ts` to get `dbtCommand`, `target`, `profilesDir`, and `deferState`. Never read these from config manually — that misses the selected target and defer toggle state.
 
+**Executor cwd difference:** `executeInTerminal` defaults to workspace root when no `cwd` is passed; `executeAndCapture` takes an explicit `cwd` (typically `project.rootPath`). `resolveDbtExecutable` resolves relative paths to absolute so commands work in both contexts.
+
 **Terminal execution:** `executeInTerminal(command, projectName, cwd?)` runs commands via VS Code `ShellExecution`. Always pass `project.rootPath` as `cwd` — without it, the shell runs from the workspace root, which breaks adapters that resolve relative paths (e.g. DuckDB `profiles.yml` `path`).
 
 ## Key Conventions
@@ -81,6 +83,11 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - All lineage CSS uses VS Code theme variables (`--vscode-editor-background`, `--vscode-widget-border`, etc.) with hardcoded fallbacks — don't introduce new hardcoded colors
 - Node fill colors are derived from `BORDER_MAP` color + `"BF"` suffix (75% opacity) — no separate `FILL_MAP`
 - Toolbar icon buttons share `.toolbar-icon-btn` base class — use it for new toolbar buttons
+
+### Model Preview
+
+- `PreviewViewProvider` uses `_ensureView()` to guarantee the webview is visible and ready before posting messages — if the view was disposed, it programmatically focuses via `executeCommand("dbtCoreTools.previewView.focus")` and waits for the `ready` handshake
+- Preview webview layout uses flexbox (`body` → `#content` → `.table-container`) to keep horizontal/vertical scrollbars within the visible panel area — don't remove height constraints or the scrollbar moves off-screen
 
 ## dbt-Specific Gotchas
 

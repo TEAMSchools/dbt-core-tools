@@ -24,6 +24,7 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
   private _ready = false;
   private _pendingMessages: unknown[] = [];
   private _generation = 0;
+  private _resolveViewReady: (() => void) | undefined;
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -57,6 +58,10 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
           webviewView.webview.postMessage(msg);
         }
         this._pendingMessages = [];
+        if (this._resolveViewReady) {
+          this._resolveViewReady();
+          this._resolveViewReady = undefined;
+        }
         return;
       }
       if (message?.type === "copy" && typeof message.text === "string") {
@@ -96,9 +101,13 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    // --- focus the panel ---
-    if (this._view) {
-      this._view.show(true);
+    // --- ensure the panel is visible and ready ---
+    await this._ensureView();
+    if (!this._view) {
+      vscode.window.showErrorMessage(
+        "dbt Core Tools: Could not open preview panel.",
+      );
+      return;
     }
 
     // Bump generation so stale responses from earlier calls are discarded.
@@ -174,6 +183,31 @@ export class PreviewViewProvider implements vscode.WebviewViewProvider {
   // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * Ensures the webview view is visible and ready to receive messages.
+   * If the view was disposed or never resolved, programmatically focuses it
+   * to trigger `resolveWebviewView`, then waits for the webview `ready` signal.
+   */
+  private async _ensureView(): Promise<void> {
+    if (this._view && this._ready) {
+      this._view.show(true);
+      return;
+    }
+
+    // View is either missing or not ready — focus it to trigger resolution.
+    const readyPromise = new Promise<void>((resolve) => {
+      // If already ready, resolve immediately on next check.
+      if (this._view && this._ready) {
+        resolve();
+        return;
+      }
+      this._resolveViewReady = resolve;
+    });
+
+    await vscode.commands.executeCommand("dbtCoreTools.previewView.focus");
+    await readyPromise;
+  }
 
   private _postMessage(message: unknown): void {
     if (!this._view) return;
