@@ -70,7 +70,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Dagre handles all node positioning — avoid post-processing overrides for sibling groups (staggered multi-column was tried and reverted due to edge routing conflicts)
 - Editor changes debounced (150ms) before triggering `updateCenter`
 - `findNodeByFilePath` checks both `original_file_path` and `patch_path` — opening a `.yml` properties file keeps the lineage centered on the model
-- Depth +/- buttons only cycle numeric depths (1 to maxDepth), clamped at both ends — "All" is a separate toggle button, not part of the +/- sequence
+- Depth minus button works from "All" (converts to maxDepth, then subtracts); plus is disabled at "All" since it already shows everything — "All" is also a separate toggle button
 - `_pendingCenterId` bridges node clicks and the debounced `updateCenter` — when `openFile` opens a file from a graph click, the clicked node ID is preserved as the center; without this, `_getActiveNodeId` re-resolves from the file path and can match the wrong node (e.g. a model via `patch_path` when a source was clicked, since sources and models can share `.yml` files)
 - `ViewMode` type is defined separately in `lineagePanel.ts` and `webview/types.ts` — keep in sync
 - React Flow `fitView` prop only fires on mount — after data changes, call `fitView()` explicitly via `requestAnimationFrame`
