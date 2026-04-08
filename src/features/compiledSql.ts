@@ -157,5 +157,36 @@ export async function showCompiledSql(
   });
   await vscode.languages.setTextDocumentLanguage(doc, "sql");
 
-  await compileIfNeeded(provider, project, modelName);
+  // Auto-compile if compiled_code is missing.
+  const node = project.findNodeByName(modelName);
+  if (!node || !node.compiled_code) {
+    const { dbtCommand, target, profilesDir, deferState } = getCommandOptions(
+      project.name,
+    );
+
+    const compileCmd = buildDbtCommand({
+      dbtCommand,
+      subcommand: "compile",
+      projectDir: project.rootPath,
+      selector: modelName,
+      target,
+      profilesDir,
+      deferState,
+    });
+
+    const manifestStatus = getManifestStatus();
+    manifestStatus?.setRunning(`compiling ${modelName}`);
+
+    await waitForParse(project.name);
+    const result = await executeAndCapture(compileCmd, project.rootPath);
+    if (result.exitCode !== 0) {
+      getOutputChannel().appendLine(
+        `[error] dbt compile failed for ${modelName}: ${result.stderr || result.stdout}`,
+      );
+    }
+    await project.reloadManifest();
+
+    await manifestStatus?.clearRunning(project);
+    provider.fireChange();
+  }
 }
