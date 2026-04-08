@@ -8,9 +8,9 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { getActiveProject } from "../../extension";
+import { getActiveProject, getCompiledSqlProvider } from "../../extension";
 import { DbtProject } from "../../core/project";
-import { safeJoinPath } from "../../utils/paths";
+import { safeJoinPath, modelNameFromPath } from "../../utils/paths";
 import { getCommandOptions } from "../../commands/modelCommands";
 import { buildDbtCommand, executeInTerminal } from "../../core/executor";
 
@@ -215,6 +215,17 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
           this._pendingCenterId = nodeId;
           const doc = await vscode.workspace.openTextDocument(filePath);
           await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+
+          // Directly update compiled SQL panel — onDidChangeActiveTextEditor
+          // may not fire reliably from a webview message handler.
+          const provider = getCompiledSqlProvider();
+          if (provider?.isOpen && filePath.endsWith(".sql")) {
+            const model = modelNameFromPath(filePath);
+            const project = getActiveProject();
+            if (model && project) {
+              provider.setModel(project.name, model);
+            }
+          }
         }
         break;
       }

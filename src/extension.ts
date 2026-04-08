@@ -41,6 +41,7 @@ let _discovery: ProjectDiscovery | null = null;
 let _activeProject: DbtProject | null = null;
 let _outputChannel: vscode.OutputChannel | null = null;
 
+let _compiledSqlProvider: CompiledSqlProvider | null = null;
 let _targetSelector: TargetSelector | null = null;
 let _deferToggle: DeferToggle | null = null;
 let _manifestStatus: ManifestStatus | null = null;
@@ -69,6 +70,10 @@ export function getOutputChannel(): vscode.OutputChannel {
     throw new Error("dbt Core Tools: extension not yet activated");
   }
   return _outputChannel;
+}
+
+export function getCompiledSqlProvider(): CompiledSqlProvider | null {
+  return _compiledSqlProvider;
 }
 
 export function getManifestStatus(): ManifestStatus | null {
@@ -220,7 +225,8 @@ export async function activate(
   );
 
   // Register compiled SQL provider and command.
-  const compiledSqlProvider = new CompiledSqlProvider();
+  _compiledSqlProvider = new CompiledSqlProvider();
+  const compiledSqlProvider = _compiledSqlProvider;
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(
       "dbt-compiled",

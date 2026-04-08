@@ -33,7 +33,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 
 **Build:** esbuild produces two bundles: `src/extension.ts` → `dist/extension.js` (CJS, node platform, `vscode` external) and `src/features/lineage/webview/App.tsx` → `dist/lineage.js` + `dist/lineage.css` (IIFE, browser platform, JSX automatic). See `esbuild.js`.
 
-**Shared state:** `src/extension.ts` owns module-level `_discovery` and `_activeProject`. Other modules access these via exported `getDiscovery()` and `getActiveProject()`. Commands and features import these getters — they never import `ProjectDiscovery` or `DbtProject` directly from core modules to access runtime state.
+**Shared state:** `src/extension.ts` owns module-level `_discovery`, `_activeProject`, and `_compiledSqlProvider`. Other modules access these via exported `getDiscovery()`, `getActiveProject()`, and `getCompiledSqlProvider()`. Commands and features import these getters — they never import `ProjectDiscovery` or `DbtProject` directly from core modules to access runtime state.
 
 **Command options:** All code that builds dbt commands must use `getCommandOptions(projectName)` from `modelCommands.ts` to get `dbtCommand`, `target`, `profilesDir`, and `deferState`. Never read these from config manually — that misses the selected target and defer toggle state.
 
@@ -70,6 +70,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
 - Target stored in-memory (not settings) — `getSelectedTarget()`/`setSelectedTarget()` from `targetSelector.ts`
 - Compiled SQL uses a single fixed URI (`dbt-compiled:compiled.sql`) with provider-owned state — `CompiledSqlProvider.setModel()` updates which model is shown; the panel follows the active editor automatically
+- Compiled SQL provider is module-level state accessed via `getCompiledSqlProvider()` — features that open files (e.g. lineage `openFile`) must call `setModel()` directly; `onDidChangeActiveTextEditor` is unreliable when `showTextDocument` is called from webview message handlers
 - Compiled SQL fast path: parse-on-save skips `dbt parse` when compiled SQL panel is open, goes straight to `dbt compile`; compile `close` handler reloads manifest directly (bypasses file-watcher debounce)
 - `CompiledSqlProvider.isOpen` is derived from internal state — reset via `clearModel()` when the virtual document closes; `onDidCloseTextDocument` in `extension.ts` handles this
 - All lineage CSS uses VS Code theme variables (`--vscode-editor-background`, `--vscode-widget-border`, etc.) with hardcoded fallbacks — don't introduce new hardcoded colors
