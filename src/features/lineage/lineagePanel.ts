@@ -52,6 +52,8 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
   private _pendingMessage: unknown | null = null;
   private _viewMode: ViewMode = "nn";
   private _depth = 1;
+  /** Set by openFile to preserve the clicked node as center across editor change. */
+  private _pendingCenterId: string | null = null;
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -134,7 +136,9 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
 
     await project.ensureLoaded();
 
-    const nodeId = this._getActiveNodeId(project);
+    const pendingId = this._pendingCenterId;
+    this._pendingCenterId = null;
+    const nodeId = pendingId ?? this._getActiveNodeId(project);
     if (!nodeId) {
       this._postMessage({
         type: "resetCenter",
@@ -208,6 +212,7 @@ export class LineageViewProvider implements vscode.WebviewViewProvider {
         if (!nodeId) return;
         const filePath = resolveNodeFilePath(nodeId);
         if (filePath) {
+          this._pendingCenterId = nodeId;
           const doc = await vscode.workspace.openTextDocument(filePath);
           await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
         }

@@ -64,6 +64,7 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Dagre handles all node positioning — avoid post-processing overrides for sibling groups (staggered multi-column was tried and reverted due to edge routing conflicts)
 - Editor changes debounced (150ms) before triggering `updateCenter`
 - `findNodeByFilePath` checks both `original_file_path` and `patch_path` — opening a `.yml` properties file keeps the lineage centered on the model
+- `_pendingCenterId` bridges node clicks and the debounced `updateCenter` — when `openFile` opens a file from a graph click, the clicked node ID is preserved as the center; without this, `_getActiveNodeId` re-resolves from the file path and can match the wrong node (e.g. a model via `patch_path` when a source was clicked, since sources and models can share `.yml` files)
 - `ViewMode` type is defined separately in `lineagePanel.ts` and `webview/types.ts` — keep in sync
 - React Flow `fitView` prop only fires on mount — after data changes, call `fitView()` explicitly via `requestAnimationFrame`
 - Codicons require: `@vscode/codicons` dep, `loader: { ".ttf": "file" }` in esbuild, `font-src {{cspSource}} data:;` in CSP
@@ -82,5 +83,6 @@ npx mocha test/unit/someFile.test.ts --require ts-node/register/transpile-only
 - Package macro `original_file_path` is relative to the package dir, not project root — resolve via `dbt_packages/<pkg>/<path>`
 - `dbt parse` and `dbt compile` both write to `manifest.json` — never run them concurrently; use `waitForParse(projectName)` from `parseOnSave.ts` before spawning compile
 - Manifest file watcher is debounced (500ms) to avoid reading partial writes — transient JSON parse errors are logged as `[warn]` not `[error]`
+- Source `original_file_path` points to the `.yml` defining the source — multiple sources (and model `patch_path` entries) can share the same `.yml`, so file-path-based lookups are ambiguous for sources
 - `patch_path` format is `"project_name://relative/path.yml"` — use `parsePatchPath()` from `src/utils/paths.ts` to extract the relative path; don't inline the parsing
 - Use `modelNameFromPath()` from `src/utils/paths.ts` to extract model name from a file path — don't inline the `split/pop/replace` pattern
