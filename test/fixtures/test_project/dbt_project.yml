@@ -1,0 +1,10 @@
+name: jaffle_shop
+version: 1.0.0
+profile: jaffle_shop
+
+clean-targets:
+  - target
+  - dbt_packages
+
+snapshot-paths:
+  - snapshots

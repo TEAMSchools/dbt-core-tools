@@ -1,0 +1,8 @@
+target/
+dbt_packages/
+logs/
+*.duckdb
+*.duckdb.wal
+defer_manifest/manifest.json
+.venv/
+package-lock.yml

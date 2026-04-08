@@ -1,0 +1,61 @@
+version: 2
+
+sources:
+  - name: jaffle_shop
+    schema: main
+    description: Raw jaffle shop data loaded from seeds
+    tables:
+      - name: raw_customers
+        description: Raw customer data
+        columns:
+          - name: id
+            description: Primary key
+            data_type: integer
+          - name: first_name
+            description: Customer first name
+            data_type: varchar
+          - name: last_name
+            description: Customer last name
+            data_type: varchar
+
+      - name: raw_orders
+        description: Raw order data
+        columns:
+          - name: id
+            description: Primary key
+            data_type: integer
+          - name: customer_id
+            description: Foreign key to raw_customers
+            data_type: integer
+          - name: order_date
+            description: Date the order was placed
+            data_type: date
+          - name: status
+            description: "Order status: completed, returned, or pending"
+            data_type: varchar
+
+      - name: raw_payments
+        description: Raw payment data (amounts in cents)
+        columns:
+          - name: id
+            description: Primary key
+            data_type: integer
+          - name: order_id
+            description: Foreign key to raw_orders
+            data_type: integer
+          - name: amount
+            description: Payment amount in cents
+            data_type: integer
+          - name: payment_method
+            description: "Payment method: credit_card, bank_transfer, or coupon"
+            data_type: varchar
+
+  - name: external_data
+    schema: main
+    description: External data sources for stage_external_sources testing
+    tables:
+      - name: raw_reviews
+        description: Product reviews loaded from external CSV
+        external:
+          location: "seeds/raw_reviews.csv"
+          file_format: csv

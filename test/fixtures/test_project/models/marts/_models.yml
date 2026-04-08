@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: customers
+    description: One row per customer with lifetime order summary
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: customer_id
+        description: Primary key — unique customer identifier
+        data_type: integer
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: Customer first name
+        data_type: varchar
+      - name: last_name
+        description: Customer last name
+        data_type: varchar
+      - name: order_count
+        description: Total number of orders placed by this customer
+        data_type: bigint
+      - name: total_amount
+        description: Lifetime spend in dollars
+        data_type: double
+
+  - name: orders
+    description: One row per order with payment info
+    columns:
+      - name: order_id
+        description: Primary key — unique order identifier
+        data_type: integer
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Foreign key to customers
+        data_type: integer
+        tests:
+          - not_null
+      - name: order_date
+        description: Date the order was placed
+        data_type: date
+      - name: status
+        description: "Order status: completed, returned, or pending"
+        data_type: varchar
+      - name: total_amount
+        description: Order total in dollars
+        data_type: double
+      - name: payment_method
+        description: "Payment method: credit_card, bank_transfer, or coupon"
+        data_type: varchar
